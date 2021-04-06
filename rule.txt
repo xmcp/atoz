@@ -1,0 +1,93 @@
+CompUnit      ::= Decl
+                | FuncDef
+                | CompUnit Decl
+                | CompUnit FuncDef
+;
+
+Decl          ::= "const" VarType Defs ";"
+                | VarType Defs ";"
+;
+Defs          ::= Def 
+                | Defs "," Def
+;
+VarType       ::= "int"
+;
+Def           ::= IDENT MaybeIdx "=" InitVal
+                | IDENT MaybeIdx
+;
+MaybeIdx      ::= //empty
+                | MaybeIdx "[" Exp "]"
+;
+InitVal       ::= Exp
+                | "{" ManyInitVal "}"
+;
+ManyInitVal   ::= //empty
+                | ManyInitVal "," InitVal
+;
+
+FuncDef       ::= FuncType IDENT "(" FuncDefParams ")" Block
+;
+FuncType      ::= "void" | "int"
+;
+FuncDefParams ::= //empty
+                | FuncDefParams "," FuncDefParam
+;
+FuncDefParam  ::= VarType IDENT
+                | VarType IDENT "[" "]" MaybeIdx
+;
+Block         ::= "{" BlockItems "}"
+;
+BlockItems    ::= //empty
+                | BlockItems Decl
+                | BlockItems Stmt
+;
+Stmt          ::= LVal "=" Exp ";"
+                | Exp ";"
+                | ";"
+                | Block
+                | "if" "(" Cond ")" Stmt %prec PREC_IF_ONLY
+                | "if" "(" Cond ")" Stmt "else" Stmt % prec PREC_IF_ELSE
+                | "while" "(" Cond ")" Stmt
+                | "break" ";"
+                | "continue" ";"
+                | "return" ";"
+                | "return" Exp ";"
+;
+Exp           ::= AddExp
+;
+Cond          ::= LOrExp
+;
+LVal          ::= IDENT MaybeIdx
+;
+
+PrimaryExp    ::= "(" Exp ")"
+                | LVal
+                | LITERAL
+;
+UnaryExp      ::= PrimaryExp
+                | IDENT "(" FuncUseParams ")"
+                | UnaryOp UnaryExp
+;
+UnaryOp       ::= "+" | "-" | "!"
+;
+FuncUseParams ::= //empty
+                | FuncUseParams "," Exp
+;
+MulExp        ::= UnaryExp
+                | MulExp ("*" | "/" | "%") UnaryExp
+;
+AddExp        ::= MulExp
+                | AddExp ("+" | "-") MulExp
+;
+RelExp        ::= AddExp
+                | RelExp ("<" | ">" | "<=" | ">=") AddExp
+;
+EqExp         ::= RelExp
+                | EqExp ("==" | "!=") RelExp
+;
+LAndExp       ::= EqExp
+                | LAndExp "&&" EqExp
+;
+LOrExp        ::= LAndExp
+                | LOrExp "||" LAndExp
+;
