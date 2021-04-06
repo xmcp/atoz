@@ -1,2 +1,4 @@
 /build/
 /testcases/
+__pycache__/
+*.pyc

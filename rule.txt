@@ -4,54 +4,58 @@ CompUnit      ::= Decl
                 | CompUnit FuncDef
 ;
 
-Decl          ::= "const" VarType Defs ";"
-                | VarType Defs ";"
+Decl          ::= KW_CONST VarType Defs SEMICOLON
+                | VarType Defs SEMICOLON
 ;
 Defs          ::= Def 
-                | Defs "," Def
+                | Defs COMMA Def
 ;
-VarType       ::= "int"
+VarType       ::= KW_INT
 ;
-Def           ::= IDENT MaybeIdx "=" InitVal
+Def           ::= IDENT MaybeIdx ASSIGN InitVal
                 | IDENT MaybeIdx
 ;
 MaybeIdx      ::= //empty
-                | MaybeIdx "[" Exp "]"
+                | MaybeIdx L_BRACKET Exp R_BRACKET
 ;
 InitVal       ::= Exp
-                | "{" ManyInitVal "}"
+                | L_BRACE R_BRACE
+                | L_BRACE ManyInitVal R_BRACE
 ;
-ManyInitVal   ::= //empty
-                | ManyInitVal "," InitVal
+ManyInitVal   ::= InitVal
+                | ManyInitVal COMMA InitVal
 ;
 
-FuncDef       ::= FuncType IDENT "(" FuncDefParams ")" Block
+FuncDef       ::= FuncType IDENT L_PAREN ZeroOrManyFuncDefParam R_PAREN Block
 ;
-FuncType      ::= "void" | "int"
+FuncType      ::= KW_VOID | KW_INT
 ;
-FuncDefParams ::= //empty
-                | FuncDefParams "," FuncDefParam
+ZeroOrManyFuncDefParam ::= //empty
+                         | ManyFuncDefParam
+;
+ManyFuncDefParam ::= FuncDefParam
+                   | ManyFuncDefParam COMMA FuncDefParam
 ;
 FuncDefParam  ::= VarType IDENT
-                | VarType IDENT "[" "]" MaybeIdx
+                | VarType IDENT L_BRACKET R_BRACKET MaybeIdx
 ;
-Block         ::= "{" BlockItems "}"
+Block         ::= L_BRACE BlockItems R_BRACE
 ;
 BlockItems    ::= //empty
                 | BlockItems Decl
                 | BlockItems Stmt
 ;
-Stmt          ::= LVal "=" Exp ";"
-                | Exp ";"
-                | ";"
+Stmt          ::= LVal ASSIGN Exp SEMICOLON
+                | Exp SEMICOLON
+                | SEMICOLON
                 | Block
-                | "if" "(" Cond ")" Stmt %prec PREC_IF_ONLY
-                | "if" "(" Cond ")" Stmt "else" Stmt % prec PREC_IF_ELSE
-                | "while" "(" Cond ")" Stmt
-                | "break" ";"
-                | "continue" ";"
-                | "return" ";"
-                | "return" Exp ";"
+                | KW_IF L_PAREN Cond R_PAREN Stmt %prec PREC_IF_ONLY
+                | KW_IF L_PAREN Cond R_PAREN Stmt "else" Stmt % prec PREC_IF_ELSE
+                | KW_WHILE L_PAREN Cond R_PAREN Stmt
+                | KW_BREAK SEMICOLON
+                | KW_CONTINUE SEMICOLON
+                | KW_RETURN SEMICOLON
+                | KW_RETURN Exp SEMICOLON
 ;
 Exp           ::= AddExp
 ;
@@ -60,18 +64,21 @@ Cond          ::= LOrExp
 LVal          ::= IDENT MaybeIdx
 ;
 
-PrimaryExp    ::= "(" Exp ")"
+PrimaryExp    ::= L_PAREN Exp R_PAREN
                 | LVal
                 | LITERAL
 ;
 UnaryExp      ::= PrimaryExp
-                | IDENT "(" FuncUseParams ")"
+                | IDENT L_PAREN ZeroOrManyFuncUseParam R_PAREN
                 | UnaryOp UnaryExp
 ;
-UnaryOp       ::= "+" | "-" | "!"
+UnaryOp       ::= "+" | "-" | OP_NOT
 ;
-FuncUseParams ::= //empty
-                | FuncUseParams "," Exp
+ZeroOrManyFuncUseParam ::= //empty
+                         | ManyFuncUseParam
+;
+ManyFuncUseParam ::= Exp
+                   | ManyFuncUseParam COMMA Exp
 ;
 MulExp        ::= UnaryExp
                 | MulExp ("*" | "/" | "%") UnaryExp
@@ -86,8 +93,8 @@ EqExp         ::= RelExp
                 | EqExp ("==" | "!=") RelExp
 ;
 LAndExp       ::= EqExp
-                | LAndExp "&&" EqExp
+                | LAndExp OP_AND EqExp
 ;
 LOrExp        ::= LAndExp
-                | LOrExp "||" LAndExp
+                | LOrExp OP_OR LAndExp
 ;

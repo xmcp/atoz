@@ -1,3 +1,5 @@
+#pragma once
+
 #include <vector>
 #include <string>
 using std::vector;
@@ -6,14 +8,14 @@ using std::string;
 #include "enum_defs.hpp"
 
 extern int yylineno;
+extern int atoz_yycol;
 
 ///// BASE
 
 struct NodeLocation {
     int lineno;
-    NodeLocation() {
-        lineno = yylineno;
-    }
+    int colno;
+    NodeLocation(): lineno(yylineno), colno(atoz_yycol)  {}
 };
 
 struct Ast {
@@ -56,7 +58,7 @@ struct AstBlock;
 struct AstBlockItems;
 struct AstExpLVal;
 
-///// LANGUAGE CONSTRUCTION
+///// LANGUAGE CONSTRUCTS
 
 struct AstCompUnit: Ast {
     vector<Ast*> val; // Decl, FuncDef
@@ -92,10 +94,10 @@ struct AstVarType: Ast {
 struct AstDef: Ast {
     string name;
     AstMaybeIdx *idxinfo;
-    AstInitVal *maybe_initval;
+    AstInitVal *initval_or_null;
 
-    AstDef(string var_name, AstMaybeIdx *idxinfo, AstInitVal *maybe_initval):
-        name(var_name), idxinfo(idxinfo), maybe_initval(maybe_initval) {}
+    AstDef(string var_name, AstMaybeIdx *idxinfo, AstInitVal *initval):
+        name(var_name), idxinfo(idxinfo), initval_or_null(initval) {}
 };
 
 struct AstMaybeIdx: Ast {

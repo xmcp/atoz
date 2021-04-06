@@ -1,9 +1,15 @@
 #include <cstdio>
 using namespace std;
 
-extern void yyparse();
+#include "test_lexer.cpp"
+#include "test_parser.cpp"
 
-int main() {
-    printf("main");
-    yyparse();
+extern int yyparse();
+
+Ast *ast_root;
+
+int main(int argc, char **argv) {
+    //test_lexer(argv[1]);
+    test_parser(argv[1]);
+    //yyparse();
 }

@@ -2,9 +2,16 @@
 #include <cstring>
 
 #include "enum_defs.hpp"
+#include "ast_defs.hpp"
 #include "sysy.tab.hpp"
 
 extern void yyerror(const char*);
+int atoz_yycol = 0;
+
+#define YY_USER_ACTION do { \
+    atoz_yycol += yyleng; \
+} while(0);
+
 %}
 
 %option yylineno
@@ -17,6 +24,7 @@ const {return KW_CONST;}
 int {return KW_INT;}
 void {return KW_VOID;}
 if {return KW_IF;}
+else {return KW_ELSE;}
 while {return KW_WHILE;}
 break {return KW_BREAK;}
 continue {return KW_CONTINUE;}
@@ -64,7 +72,10 @@ return {return KW_RETURN;}
  /* identifiers */
 
 [a-zA-Z_][a-zA-Z_0-9]* {
-    memcpy(yylval.ident_str, yytext, yyleng);
+    char *ptr = (char*)malloc(yyleng+1);
+    ptr[yyleng] = '\0';
+    memcpy(ptr, yytext, yyleng);
+    yylval.ident_str = ptr;
     return IDENT;
 }
 
@@ -84,10 +95,14 @@ return {return KW_RETURN;}
 
  /* whitespaces */
 
-[ \t\n] {}
+[ \t] {}
+\n {
+    atoz_yycol = 0;
+}
 
 %%
 
 int yywrap() {
+    atoz_yycol = 0;
     return 1;
 }
