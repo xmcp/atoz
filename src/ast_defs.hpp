@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <cassert>
 using std::vector;
 using std::string;
 
@@ -9,6 +10,18 @@ using std::string;
 
 extern int yylineno;
 extern int atoz_yycol;
+
+///// FORWARD DECL
+
+struct AstDefs;
+struct AstDef;
+struct AstMaybeIdx;
+struct AstInitVal;
+struct AstExp;
+struct AstFuncDefParams;
+struct AstBlock;
+struct AstBlockItems;
+struct AstExpLVal;
 
 ///// BASE
 
@@ -43,21 +56,6 @@ public:
     }
 };
 
-///// FORWARD DECL
-
-struct AstVarType;
-struct AstDefs;
-struct AstDef;
-struct AstMaybeIdx;
-struct AstInitVal;
-struct AstExp;
-struct AstFuncType;
-struct AstFuncDefParams;
-struct AstFuncDefParam;
-struct AstBlock;
-struct AstBlockItems;
-struct AstExpLVal;
-
 ///// LANGUAGE CONSTRUCTS
 
 struct AstCompUnit: Ast {
@@ -68,12 +66,17 @@ struct AstCompUnit: Ast {
 };
 
 struct AstDecl: Ast {
-    AstVarType *type;
-    bool is_const;
+    VarType _type;
+    bool _is_const;
     AstDefs *defs;
 
-    AstDecl(AstVarType *type, bool is_const, AstDefs *defs):
-        type(type), is_const(is_const), defs(defs) {}
+    AstDecl(VarType type, bool is_const, AstDefs *defs):
+        _type(type), _is_const(is_const), defs(defs) {
+            propagate_property();
+        }
+    
+    void propagate_property();
+    void propagate_defpos(DefPosition pos);
 };
 
 struct AstDefs: Ast {
@@ -85,19 +88,20 @@ struct AstDefs: Ast {
     }
 };
 
-struct AstVarType: Ast { // manual
-    VarType val;
-    
-    AstVarType(VarType val): val(val) {}
-};
-
 struct AstDef: Ast {
     string name;
     AstMaybeIdx *idxinfo;
     AstInitVal *initval_or_null;
 
+    // will be propagated
+    VarType type;
+    bool is_const;
+    DefPosition pos;
+    int index;
+
     AstDef(string var_name, AstMaybeIdx *idxinfo, AstInitVal *initval):
-        name(var_name), idxinfo(idxinfo), initval_or_null(initval) {}
+        name(var_name), idxinfo(idxinfo), initval_or_null(initval),
+        type(VarInt), is_const(false), pos(DefUnknown), index(-1) {}
 };
 
 struct AstMaybeIdx: Ast {
@@ -115,40 +119,35 @@ struct AstInitVal: Ast {
         AstExp *single;
         vector<AstInitVal*> *many;
     } val;
+
+    AstInitVal(bool is_many): is_many(is_many) {
+        if(is_many)
+            val.many = new vector<AstInitVal*>();
+    }
+    void push_val(AstInitVal *next) {
+        assert(is_many);
+        val.many->push_back(next);
+    }
 };
 
 struct AstFuncDef: Ast {
-    AstFuncType *type;
+    FuncType type;
     string name;
     AstFuncDefParams *params;
     AstBlock *body;
 
-    AstFuncDef(AstFuncType *type, string func_name, AstFuncDefParams *params, AstBlock *body):
+    AstFuncDef(FuncType type, string func_name, AstFuncDefParams *params, AstBlock *body):
         type(type), name(func_name), params(params), body(body) {}
 };
 
-struct AstFuncType: Ast { // manual
-    FuncType val;
-
-    AstFuncType(FuncType val): val(val) {}
-};
-
 struct AstFuncDefParams: Ast {
-    vector<AstFuncDefParam*> val;
+    vector<AstDef*> val;
 
     AstFuncDefParams() {}
-    void push_val(AstFuncDefParam *next) {
+    void push_val(AstDef *next) {
         val.push_back(next);
     }
-};
-
-struct AstFuncDefParam: Ast {
-    AstVarType *type;
-    string name;
-    AstMaybeIdx *idxinfo_or_null;
-
-    AstFuncDefParam(AstVarType *type, string param_name, AstMaybeIdx *idxinfo_or_null):
-        type(type), name(param_name), idxinfo_or_null(idxinfo_or_null) {}
+    void propagate_property_and_defpos();
 };
 
 struct AstFuncUseParams: Ast {
@@ -161,15 +160,9 @@ struct AstFuncUseParams: Ast {
 };
 
 struct AstBlock: Ast {
-    AstBlockItems *body;
+    vector<Ast*> body; // Decl, Stmt
 
-    AstBlock(AstBlockItems *body): body(body) {}
-};
-
-struct AstBlockItems: Ast {
-    vector<Ast*> val; // Decl, Stmt
-
-    AstBlockItems() {}
+    AstBlock() {}
     void push_val(Ast *next);
 };
 
@@ -188,6 +181,14 @@ struct AstStmtAssignment: AstStmt {
 
     AstStmtAssignment(AstExpLVal *lval, AstExp *rval): AstStmt(StmtAssignment),
         lval(lval), rval(rval) {}
+    void gen_eeyore();
+};
+
+struct AstStmtExp: AstStmt {
+    AstExp *exp;
+
+    AstStmtExp(AstExp *exp): AstStmt(StmtExp),
+        exp(exp) {}
     void gen_eeyore();
 };
 
@@ -263,10 +264,12 @@ struct AstExp: Ast {
 
 struct AstExpLVal: AstExp {
     string name;
+    AstDef *def;
     AstMaybeIdx *idxinfo;
 
     AstExpLVal(string name, AstMaybeIdx *idxinfo):
-        name(name), idxinfo(idxinfo) {}
+        name(name), idxinfo(idxinfo),
+        def(nullptr) {}
     ConstExpResult calc_const();
 };
 
@@ -279,10 +282,12 @@ struct AstExpLiteral: AstExp {
 
 struct AstExpFunctionCall: AstExp {
     string name;
-    AstFuncUseParams params;
+    AstFuncDef *def;
+    AstFuncUseParams *params;
 
-    AstExpFunctionCall(string name, AstFuncUseParams params):
-        name(name), params(params) {}
+    AstExpFunctionCall(string name, AstFuncUseParams *params):
+        name(name), params(params),
+        def(nullptr) {}
     ConstExpResult calc_const();
 };
 
@@ -296,11 +301,11 @@ struct AstExpOpUnary: AstExp {
 };
 
 struct AstExpOpBinary: AstExp {
-    UnaryOpKinds op;
+    BinaryOpKinds op;
     AstExp *operand1;
     AstExp *operand2;
 
-    AstExpOpBinary(UnaryOpKinds op, AstExp *operand1, AstExp *operand2):
+    AstExpOpBinary(BinaryOpKinds op, AstExp *operand1, AstExp *operand2):
         op(op), operand1(operand1), operand2(operand2) {}
     ConstExpResult calc_const();
 };

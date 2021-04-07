@@ -3,7 +3,7 @@
 CXX_OPTIONS = -lm -std=c++11
 
 sysy.tab:
-	yacc --no-lines -d -v -o build/sysy.tab.cpp src/sysy.y
+	yacc -d -v -o build/sysy.tab.cpp src/sysy.y
 
 lex.yy.cpp: sysy.tab
 	lex --noline -o build/lex.yy.cpp src/sysy.l
