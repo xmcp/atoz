@@ -32,7 +32,6 @@ extern Ast *ast_root;
     gen_ptr_type(FuncDefParams);
     gen_ptr_type(FuncUseParams);
     gen_ptr_type(Block);
-    gen_ptr_type(BlockItems);
     gen_ptr_type(Stmt);
     gen_ptr_type(Exp);
     gen_ptr_type(ExpLVal);

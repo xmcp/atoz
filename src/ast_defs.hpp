@@ -20,7 +20,6 @@ struct AstInitVal;
 struct AstExp;
 struct AstFuncDefParams;
 struct AstBlock;
-struct AstBlockItems;
 struct AstExpLVal;
 
 ///// BASE
@@ -63,6 +62,8 @@ struct AstCompUnit: Ast {
 
     AstCompUnit() {}
     void push_val(Ast *next);
+
+    void lookup_name();
 };
 
 struct AstDecl: Ast {
@@ -120,7 +121,7 @@ struct AstInitVal: Ast {
         vector<AstInitVal*> *many;
     } val;
 
-    AstInitVal(bool is_many): is_many(is_many) {
+    AstInitVal(bool is_many): is_many(is_many), val({}) {
         if(is_many)
             val.many = new vector<AstInitVal*>();
     }
@@ -181,7 +182,7 @@ struct AstStmtAssignment: AstStmt {
 
     AstStmtAssignment(AstExpLVal *lval, AstExp *rval): AstStmt(StmtAssignment),
         lval(lval), rval(rval) {}
-    void gen_eeyore();
+    void gen_eeyore() override;
 };
 
 struct AstStmtExp: AstStmt {
@@ -189,12 +190,12 @@ struct AstStmtExp: AstStmt {
 
     AstStmtExp(AstExp *exp): AstStmt(StmtExp),
         exp(exp) {}
-    void gen_eeyore();
+    void gen_eeyore() override;
 };
 
 struct AstStmtVoid: AstStmt {
     AstStmtVoid(): AstStmt(StmtVoid) {}
-    void gen_eeyore();
+    void gen_eeyore() override;
 };
 
 struct AstStmtBlock: AstStmt {
@@ -202,7 +203,7 @@ struct AstStmtBlock: AstStmt {
 
     AstStmtBlock(AstBlock *block): AstStmt(StmtBlock),
         block(block) {}
-    void gen_eeyore();
+    void gen_eeyore() override;
 };
 
 struct AstStmtIfOnly: AstStmt {
@@ -211,7 +212,7 @@ struct AstStmtIfOnly: AstStmt {
 
     AstStmtIfOnly(AstExp *cond, AstStmt *body): AstStmt(StmtIfOnly),
         cond(cond), body(body) {}
-    void gen_eeyore();
+    void gen_eeyore() override;
 };
 
 struct AstStmtIfElse: AstStmt {
@@ -221,7 +222,7 @@ struct AstStmtIfElse: AstStmt {
 
     AstStmtIfElse(AstExp *cond, AstStmt *body_true, AstStmt *body_false): AstStmt(StmtIfElse),
         cond(cond), body_true(body_true), body_false(body_false) {}
-    void gen_eeyore();
+    void gen_eeyore() override;
 };
 
 struct AstStmtWhile: AstStmt {
@@ -230,22 +231,22 @@ struct AstStmtWhile: AstStmt {
 
     AstStmtWhile(AstExp *cond, AstStmt *body): AstStmt(StmtWhile),
         cond(cond), body(body) {}
-    void gen_eeyore();
+    void gen_eeyore() override;
 };
 
 struct AstStmtBreak: AstStmt {
     AstStmtBreak(): AstStmt(StmtBreak) {}
-    void gen_eeyore();
+    void gen_eeyore() override;
 };
 
 struct AstStmtContinue: AstStmt {
     AstStmtContinue(): AstStmt(StmtContinue) {}
-    void gen_eeyore();
+    void gen_eeyore() override;
 };
 
 struct AstStmtReturnVoid: AstStmt {
     AstStmtReturnVoid(): AstStmt(StmtReturnVoid) {}
-    void gen_eeyore();
+    void gen_eeyore() override;
 };
 
 struct AstStmtReturn: AstStmt {
@@ -253,7 +254,7 @@ struct AstStmtReturn: AstStmt {
 
     AstStmtReturn(AstExp *retval): AstStmt(StmtReturn),
         retval(retval) {}
-    void gen_eeyore();
+    void gen_eeyore() override;
 };
 
 ///// EXPRESSION
@@ -270,14 +271,14 @@ struct AstExpLVal: AstExp {
     AstExpLVal(string name, AstMaybeIdx *idxinfo):
         name(name), idxinfo(idxinfo),
         def(nullptr) {}
-    ConstExpResult calc_const();
+    ConstExpResult calc_const() override;
 };
 
 struct AstExpLiteral: AstExp {
     int val;
 
     AstExpLiteral(int val): val(val) {}
-    ConstExpResult calc_const();
+    ConstExpResult calc_const() override;
 };
 
 struct AstExpFunctionCall: AstExp {
@@ -288,7 +289,7 @@ struct AstExpFunctionCall: AstExp {
     AstExpFunctionCall(string name, AstFuncUseParams *params):
         name(name), params(params),
         def(nullptr) {}
-    ConstExpResult calc_const();
+    ConstExpResult calc_const() override;
 };
 
 struct AstExpOpUnary: AstExp {
@@ -297,7 +298,7 @@ struct AstExpOpUnary: AstExp {
 
     AstExpOpUnary(UnaryOpKinds op, AstExp *operand):
         op(op), operand(operand) {}
-    ConstExpResult calc_const();
+    ConstExpResult calc_const() override;
 };
 
 struct AstExpOpBinary: AstExp {
@@ -307,5 +308,5 @@ struct AstExpOpBinary: AstExp {
 
     AstExpOpBinary(BinaryOpKinds op, AstExp *operand1, AstExp *operand2):
         op(op), operand1(operand1), operand2(operand2) {}
-    ConstExpResult calc_const();
+    ConstExpResult calc_const() override;
 };

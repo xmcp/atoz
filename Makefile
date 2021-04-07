@@ -10,9 +10,10 @@ lex.yy.cpp: sysy.tab
 
 srcfiles:
 	cp -t build src/*.cpp
+	cp -t build src/*.hpp
 
 compiler: srcfiles sysy.tab lex.yy.cpp
-	g++ ${CXX_OPTIONS} -o build/compiler -Isrc build/*.cpp
+	g++ ${CXX_OPTIONS} -o build/compiler -Ibuild build/*.cpp
 
 clean:
 	rm build/*

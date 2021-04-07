@@ -1,4 +1,5 @@
 #include "ast_defs.hpp"
+#include "name_looker.cpp"
 #include <cassert>
 
 #define istype(ptr,cls) (dynamic_cast<cls*>(ptr)!=nullptr)
@@ -40,4 +41,10 @@ void AstFuncDefParams::propagate_property_and_defpos() {
         def->index = idx++;
         def->pos = DefArg;
     }
+}
+
+///// lookup name
+
+void AstCompUnit::lookup_name() {
+    NameLooker(this).lookup_main();
 }

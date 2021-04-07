@@ -9,6 +9,7 @@ run_cmd_willsucc('make clean')
 run_cmd_willsucc('make')
 
 for p in tqdm(list(pathlib.Path('.').glob('testcases/**/*.sy'))):
+    print('trying', p)
     out = run_cmd_willsucc(f'build/compiler {p}')
     if not out.rstrip().endswith('TEST PASSED!'):
         print('RESULT ERROR', p)

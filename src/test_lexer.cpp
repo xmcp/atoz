@@ -77,20 +77,11 @@ inline void describe_token(int token) {
     }
 }
 
-inline void test_lexer(string fn) {
-    printf("open file for test: %s\n", fn.c_str());
-
-    FILE *f = fopen(fn.c_str(), "r");
-    yyrestart(f);
-
-    printf("opened\n");
-
+inline void test_lexer() {
     int token;
     while((token = yylex())) {
         describe_token(token);
     }
 
     printf("<eof>\nTEST PASSED!\n");
-
-    fclose(f);
 }

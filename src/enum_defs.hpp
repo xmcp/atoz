@@ -1,5 +1,8 @@
 #pragma once
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreturn-type"
+
 #include <cassert>
 
 // lexer type
@@ -73,3 +76,4 @@ inline BinaryOpKinds cvt_to_binary(LexTypeEq op) {
 // def position
 
 enum DefPosition { DefUnknown, DefGlobal, DefLocal, DefArg };
+#pragma clang diagnostic pop
