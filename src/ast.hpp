@@ -69,6 +69,7 @@ struct AstCompUnit: Ast {
     void push_val(Ast *next);
 
     void complete_tree();
+    void gen_eeyore();
 };
 
 struct AstDecl: Ast {
@@ -83,6 +84,7 @@ struct AstDecl: Ast {
     
     void propagate_property();
     void propagate_defpos(DefPosition pos);
+    void gen_eeyore();
 };
 
 struct AstDefs: Ast {
@@ -112,6 +114,8 @@ struct AstDef: Ast {
             name(var_name), idxinfo(idxinfo), ast_initval_or_null(ast_initval), initval(),
             type(VarInt), is_const(false), pos(DefUnknown), index(-1) {}
     void calc_initval();
+    void gen_eeyore_decl();
+    void gen_eeyore_init();
 };
 
 struct AstMaybeIdx: Ast {
@@ -151,6 +155,7 @@ struct AstFuncDef: Ast {
 
     AstFuncDef(FuncType type, string func_name, AstFuncDefParams *params, AstBlock *body):
         type(type), name(func_name), params(params), body(body) {}
+    void gen_eeyore();
 };
 
 struct AstFuncDefParams: Ast {
@@ -170,6 +175,7 @@ struct AstFuncUseParams: Ast {
     void push_val(AstExp *next) {
         val.push_back(next);
     }
+    void gen_eeyore();
 };
 
 struct AstBlock: Ast {
@@ -177,6 +183,7 @@ struct AstBlock: Ast {
 
     AstBlock() {}
     void push_val(Ast *next);
+    void gen_eeyore();
 };
 
 ///// STATEMENT

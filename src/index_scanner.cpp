@@ -104,7 +104,11 @@ int InitVal::getvalue(AstMaybeIdx *idxinfo) {
         scanerror("index not const: %s", res.error.c_str());
 
     int idx = res.val;
-    res = value[idx]->calc_const();
+    AstExp *exp = value[idx];
+    if(!exp) // not initialized
+        return 0;
+
+    res = exp->calc_const();
     if(res.iserror)
         scanerror("array value at %d not const: %s", idx, res.error.c_str());
 
