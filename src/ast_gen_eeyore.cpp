@@ -43,3 +43,23 @@ void AstStmtReturnVoid::gen_eeyore() {
 void AstStmtReturn::gen_eeyore() {
     
 }
+
+void AstExpLVal::gen_eeyore() {
+
+}
+
+void AstExpLiteral::gen_eeyore() {
+
+}
+
+void AstExpFunctionCall::gen_eeyore() {
+
+}
+
+void AstExpOpUnary::gen_eeyore() {
+
+}
+
+void AstExpOpBinary::gen_eeyore() {
+
+}

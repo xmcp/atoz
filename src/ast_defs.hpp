@@ -98,7 +98,6 @@ struct AstDef: Ast {
     string name;
     AstMaybeIdx *idxinfo;
     AstInitVal *ast_initval_or_null;
-    InitVal initval;
 
     // will be propagated
     VarType type;
@@ -106,8 +105,11 @@ struct AstDef: Ast {
     DefPosition pos;
     int index;
 
-    AstDef(string var_name, AstMaybeIdx *idxinfo, AstInitVal *initval):
-            name(var_name), idxinfo(idxinfo), ast_initval_or_null(initval), initval(idxinfo),
+    // calculated in tree completing phase
+    InitVal initval;
+
+    AstDef(string var_name, AstMaybeIdx *idxinfo, AstInitVal *ast_initval):
+            name(var_name), idxinfo(idxinfo), ast_initval_or_null(ast_initval), initval(),
             type(VarInt), is_const(false), pos(DefUnknown), index(-1) {}
     void calc_initval();
 };
@@ -143,6 +145,9 @@ struct AstFuncDef: Ast {
     string name;
     AstFuncDefParams *params;
     AstBlock *body;
+
+    // calculated in tree completing phase
+    vector<AstDef*> defs_inside;
 
     AstFuncDef(FuncType type, string func_name, AstFuncDefParams *params, AstBlock *body):
         type(type), name(func_name), params(params), body(body) {}
@@ -268,6 +273,7 @@ struct AstStmtReturn: AstStmt {
 
 struct AstExp: Ast {
     virtual ConstExpResult calc_const() = 0;
+    virtual void gen_eeyore() = 0;
 };
 
 struct AstExpLVal: AstExp {
@@ -279,6 +285,7 @@ struct AstExpLVal: AstExp {
         name(name), idxinfo(idxinfo),
         def(nullptr) {}
     ConstExpResult calc_const() override;
+    void gen_eeyore() override;
 };
 
 struct AstExpLiteral: AstExp {
@@ -286,6 +293,7 @@ struct AstExpLiteral: AstExp {
 
     AstExpLiteral(int val): val(val) {}
     ConstExpResult calc_const() override;
+    void gen_eeyore() override;
 };
 
 struct AstExpFunctionCall: AstExp {
@@ -297,6 +305,7 @@ struct AstExpFunctionCall: AstExp {
         name(name), params(params),
         def(nullptr) {}
     ConstExpResult calc_const() override;
+    void gen_eeyore() override;
 };
 
 struct AstExpOpUnary: AstExp {
@@ -306,6 +315,7 @@ struct AstExpOpUnary: AstExp {
     AstExpOpUnary(UnaryOpKinds op, AstExp *operand):
         op(op), operand(operand) {}
     ConstExpResult calc_const() override;
+    void gen_eeyore() override;
 };
 
 struct AstExpOpBinary: AstExp {
@@ -316,4 +326,5 @@ struct AstExpOpBinary: AstExp {
     AstExpOpBinary(BinaryOpKinds op, AstExp *operand1, AstExp *operand2):
         op(op), operand1(operand1), operand2(operand2) {}
     ConstExpResult calc_const() override;
+    void gen_eeyore() override;
 };

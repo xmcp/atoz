@@ -10,8 +10,10 @@ using std::memset;
     exit(1); \
 } while(0)
 
-InitVal::InitVal(AstMaybeIdx *shapeinfo):
-    value(nullptr), totelems(0), calcstep(1), calcdim(0), calcpos(0), calculated(false) {
+InitVal::InitVal():
+    value(nullptr), totelems(0), calcstep(1), calcdim(0), calcpos(0), calculated(false) {}
+
+void InitVal::init(AstMaybeIdx *shapeinfo) {
     for(auto exp: shapeinfo->val) {
         auto res = exp->calc_const();
         if(res.iserror)
@@ -23,7 +25,7 @@ InitVal::InitVal(AstMaybeIdx *shapeinfo):
         calcstep *= res.val;
     }
     totelems = calcstep;
-    value = new int[totelems];
+    value = new AstExp*[totelems];
     memset(value, 0, sizeof(value));
 }
 
@@ -32,11 +34,7 @@ void InitVal::calc(AstInitVal *v) {
         if(calcpos>=totelems)
             scanerror("too many initializers: item length is %d", totelems);
 
-        auto res = v->val.single->calc_const();
-        if(res.iserror)
-            scanerror("initializer not const: %s", res.error.c_str());
-
-        value[calcpos] = res.val;
+        value[calcpos] = v->val.single;
         calcpos++;
     } else {
         if(calcdim==(int)shape.size())
@@ -53,7 +51,7 @@ void InitVal::calc(AstInitVal *v) {
         for(auto vv: *v->val.many)
             calc(vv);
 
-        if(calcpos > posbegin+calcstep)
+        if(calcpos > posbegin+calcstep*dimsize)
             scanerror("too many initializers for this dimension");
 
         calcpos = posbegin+calcstep;
@@ -105,6 +103,12 @@ int InitVal::getvalue(AstMaybeIdx *idxinfo) {
     if(res.iserror)
         scanerror("index not const: %s", res.error.c_str());
 
+    int idx = res.val;
+    res = value[idx]->calc_const();
+    if(res.iserror)
+        scanerror("array value at %d not const: %s", idx, res.error.c_str());
+
     return res.val;
 }
+
 

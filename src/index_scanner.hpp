@@ -5,7 +5,7 @@ struct AstMaybeIdx;
 struct AstExp;
 
 class InitVal {
-    int *value;
+    AstExp **value;
     vector<int> shape;
     int totelems;
 
@@ -19,7 +19,8 @@ class InitVal {
 
 public:
 
-    InitVal(AstMaybeIdx *shapeinfo);
+    InitVal(); // yyparse phase
+    void init(AstMaybeIdx *shapeinfo); // tree completing phase, after name is looked up
 
     void calc_if_needed(AstInitVal *v) {
         if(!calculated) {

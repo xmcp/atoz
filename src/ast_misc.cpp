@@ -50,6 +50,7 @@ void AstCompUnit::complete_tree() {
 }
 
 void AstDef::calc_initval() {
+    initval.init(idxinfo);
     if(ast_initval_or_null)
         initval.calc_if_needed(ast_initval_or_null);
     else { // no initval, default to 0

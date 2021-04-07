@@ -2,3 +2,6 @@
 /testcases/
 __pycache__/
 *.pyc
+/.idea/
+/cmake-*
+CMakeLists.txt

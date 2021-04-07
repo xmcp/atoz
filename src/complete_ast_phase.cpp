@@ -25,12 +25,13 @@ using std::make_pair;
 template<typename T>
 class StackedTable {
     unordered_map<string, T*> table;
+    vector<T*> *reporter;
 
 public:
     StackedTable *parent;
 
-    StackedTable(StackedTable *parent):
-        parent(parent) {
+    StackedTable(StackedTable *parent, vector<T*> *reporter):
+        parent(parent), reporter(reporter) {
         //printf("new %x from %x\n", (int)(long long)this, (int)(long long)parent);
     }
 
@@ -42,6 +43,9 @@ public:
             lookuperror("duplicate symbol: %s", name.c_str());
 
         table.insert(make_pair(name, val));
+
+        if(reporter)
+            reporter->push_back(val);
     }
 
     T *get(string name) {
@@ -64,10 +68,12 @@ class SymTable {
 public:
     StackedTable<AstFuncDef> func;
     StackedTable<AstDef> var;
+    vector<AstDef*> *reporter;
 
-    SymTable(SymTable *parent):
-        func(parent ? &parent->func : nullptr),
-        var(parent ? &parent->var : nullptr) {}
+    SymTable(SymTable *parent, vector<AstDef*> *reporter):
+        func(parent ? &parent->func : nullptr, nullptr),
+        var(parent ? &parent->var : nullptr, reporter),
+        reporter(reporter) {}
 };
 
 class TreeCompleter {
@@ -116,7 +122,9 @@ public:
 
     void visit(AstFuncDef *node, SymTable *tbl) {
         tbl->func.put(node->name, node);
-        tbl = new SymTable(tbl);
+        if(tbl->reporter)
+            lookuperror("name reporter not null outside funcdef %s", node->name.c_str());
+        tbl = new SymTable(tbl, &node->defs_inside);
         visit(node->params, tbl); // params are in local scope
         visit(node->body, tbl);
         delete tbl;
@@ -131,7 +139,7 @@ public:
     }
 
     void visit(AstBlock *node, SymTable *tbl) {
-        tbl = new SymTable(tbl);
+        tbl = new SymTable(tbl, tbl->reporter);
         visitall(node->body);
         delete tbl;
     }
@@ -299,7 +307,7 @@ public:
     }
 
     void complete_tree_main() {
-        auto *tbl = new SymTable(nullptr);
+        auto *tbl = new SymTable(nullptr, nullptr);
         install_builtin_names(tbl);
         visit(root, tbl);
         delete tbl;
