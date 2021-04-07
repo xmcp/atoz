@@ -1,3 +1,6 @@
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "readability-convert-member-functions-to-static"
+
 #include <unordered_map>
 #include <string>
 #include <cassert>
@@ -22,12 +25,12 @@ public:
 
     StackedTable(StackedTable *parent):
         parent(parent) {
-        printf("new %x from %x\n", (int)(long)this, (int)(long)parent);
+        //printf("new %x from %x\n", (int)(long long)this, (int)(long long)parent);
     }
 
     void put(string name, T *val) {
         assert(val!=nullptr);
-        printf("put %x %s\n",(int)(long)this, name.c_str());
+        //printf("put %x %s\n",(int)(long long)this, name.c_str());
 
         if(table.find(name)!=table.end())
             lookuperror("duplicate symbol: %s", name.c_str());
@@ -36,7 +39,7 @@ public:
     }
 
     T *get(string name) {
-        printf("get %x %s\n", (int)(long)this, name.c_str());
+        //printf("get %x %s\n", (int)(long long)this, name.c_str());
 
         auto it = table.find(name);
         if(it==table.end()) {
@@ -203,7 +206,9 @@ public:
 
     void visit(Ast *node, SymTable *tbl) {
         #define istype(ptr, cls) (dynamic_cast<cls*>(ptr)!=nullptr)
-        #define proctype(type) if(istype(node, type)) visit((type*)node, tbl)
+        #define proctype(type) do { \
+            if(istype(node, type)) {visit((type*)node, tbl); return;} \
+        } while(0)
 
         proctype(AstCompUnit);
         proctype(AstDecl);
@@ -231,7 +236,8 @@ public:
         proctype(AstExpFunctionCall);
         proctype(AstExpOpUnary);
         proctype(AstExpOpBinary);
-        proctype(AstExpOpBinary);
+
+        printf("!! ignored node\n");
     }
 
     void install_builtin_names(SymTable *tbl) {
@@ -292,3 +298,4 @@ public:
         delete tbl;
     }
 };
+#pragma clang diagnostic pop
