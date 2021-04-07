@@ -85,7 +85,7 @@ struct AstDefs: Ast {
     }
 };
 
-struct AstVarType: Ast {
+struct AstVarType: Ast { // manual
     VarType val;
     
     AstVarType(VarType val): val(val) {}
@@ -127,7 +127,7 @@ struct AstFuncDef: Ast {
         type(type), name(func_name), params(params), body(body) {}
 };
 
-struct AstFuncType: Ast {
+struct AstFuncType: Ast { // manual
     FuncType val;
 
     AstFuncType(FuncType val): val(val) {}

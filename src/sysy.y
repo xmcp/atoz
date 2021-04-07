@@ -16,9 +16,29 @@ extern Ast *ast_root;
     enum LexTypeMul opt_mul;
     enum LexTypeRel opt_rel;
     enum LexTypeEq opt_eq;
+
     char *ident_str;
     int lit_int;
-    Ast* ast;
+
+    #define gen_ptr_type(name) Ast##name* ptr_##name
+
+    gen_ptr_type(CompUnit);
+    gen_ptr_type(Decl);
+    gen_ptr_type(Defs);
+    gen_ptr_type(Def);
+    gen_ptr_type(MaybeIdx);
+    gen_ptr_type(InitVal);
+    gen_ptr_type(FuncDef);
+    gen_ptr_type(FuncDefParams);
+    gen_ptr_type(FuncDefParam);
+    gen_ptr_type(FuncUseParams);
+    gen_ptr_type(Block);
+    gen_ptr_type(BlockItems);
+    gen_ptr_type(Stmt);
+    gen_ptr_type(Exp);
+    gen_ptr_type(ExpLVal);
+
+    #undef gen_ptr_type
 };
 
 %token KW_CONST KW_INT KW_VOID KW_IF KW_ELSE KW_WHILE KW_BREAK KW_CONTINUE KW_RETURN // keywords
@@ -40,10 +60,21 @@ extern Ast *ast_root;
 
 %start Root
 
-%type <ast> CompUnit Decl Defs Def MaybeIdx InitVal ManyInitVal ZeroOrManyInitVal
-%type <ast> FuncDef ManyFuncDefParam ZeroOrManyFuncDefParam FuncDefParam Block BlockItems Stmt
-%type <ast> Exp Cond LVal PrimaryExp UnaryExp ManyFuncUseParam ZeroOrManyFuncUseParam
-%type <ast> MulExp AddExp RelExp EqExp LAndExp LOrExp
+%type <ptr_CompUnit> CompUnit
+%type <ptr_Decl> Decl
+%type <ptr_Defs> Defs
+%type <ptr_Def> Def
+%type <ptr_MaybeIdx> MaybeIdx
+%type <ptr_InitVal> InitVal  ManyInitVal  ZeroOrManyInitVal
+%type <ptr_FuncDef> FuncDef
+%type <ptr_FuncDefParams> ManyFuncDefParam ZeroOrManyFuncDefParam
+%type <ptr_FuncDefParam> FuncDefParam
+%type <ptr_Block> Block
+%type <ptr_BlockItems> BlockItems
+%type <ptr_Stmt> Stmt
+%type <ptr_Exp> Exp Cond PrimaryExp UnaryExp MulExp AddExp RelExp EqExp LAndExp LOrExp
+%type <ptr_ExpLVal> LVal  
+%type <ptr_FuncUseParams> ManyFuncUseParam ZeroOrManyFuncUseParam
 
 %%
 

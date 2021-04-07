@@ -72,7 +72,7 @@ return {return KW_RETURN;}
  /* identifiers */
 
 [a-zA-Z_][a-zA-Z_0-9]* {
-    char *ptr = (char*)malloc(yyleng+1);
+    char *ptr = new char[yyleng+1];
     ptr[yyleng] = '\0';
     memcpy(ptr, yytext, yyleng);
     yylval.ident_str = ptr;

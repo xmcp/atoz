@@ -67,7 +67,7 @@ inline void describe_token(int token) {
             printf("{!} "); break;
 
         case IDENT:
-            printf("{ident: %s} ", yylval.ident_str); free(yylval.ident_str); break;
+            printf("{ident: %s} ", yylval.ident_str); delete[] yylval.ident_str; break;
         case LITERAL:
             printf("{lit: %d} ", yylval.lit_int); break;
 
