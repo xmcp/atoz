@@ -1,5 +1,5 @@
-#include "ast_defs.hpp"
-#include "complete_ast_phase.cpp"
+#include "ast.hpp"
+#include "complete_tree_phase.cpp"
 #include <cassert>
 
 #define istype(ptr,cls) (dynamic_cast<cls*>(ptr)!=nullptr)

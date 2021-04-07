@@ -2,7 +2,7 @@
 using std::string;
 
 #include "enum_defs.hpp"
-#include "ast_defs.hpp"
+#include "ast.hpp"
 #include "sysy.tab.hpp"
 
 extern int yylex();

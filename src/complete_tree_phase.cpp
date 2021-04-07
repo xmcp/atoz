@@ -14,7 +14,7 @@ using std::unordered_map;
 using std::string;
 using std::make_pair;
 
-#include "ast_defs.hpp"
+#include "ast.hpp"
 
 #define lookuperror(...) do { \
     printf("name lookup error: "); \

@@ -1,5 +1,5 @@
 #include "enum_defs.hpp"
-#include "ast_defs.hpp"
+#include "ast.hpp"
 
 ConstExpResult do_unary_op(UnaryOpKinds op, int val) {
     switch(op) {

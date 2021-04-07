@@ -1,7 +1,7 @@
 #include <cstring>
 using std::memset;
 
-#include "ast_defs.hpp"
+#include "ast.hpp"
 #include "index_scanner.hpp"
 
 #define scanerror(...) do { \
