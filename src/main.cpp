@@ -18,6 +18,7 @@ FILE *openyyfile(string fn) {
 }
 
 int main(int argc, char **argv) {
+
     FILE *f = openyyfile(argv[1]);
 
     //test_lexer();
@@ -25,8 +26,8 @@ int main(int argc, char **argv) {
     ast_root = nullptr;
 
     yyparse();
-    printf("parsed, will lookup\n");
-    ast_root->lookup_name();
+    printf("parsed, will complete tree\n");
+    ast_root->complete_tree();
 
     fclose(f);
     printf("TEST PASSED!\n");

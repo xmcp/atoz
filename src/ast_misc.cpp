@@ -1,5 +1,5 @@
 #include "ast_defs.hpp"
-#include "name_looker.cpp"
+#include "complete_ast_phase.cpp"
 #include <cassert>
 
 #define istype(ptr,cls) (dynamic_cast<cls*>(ptr)!=nullptr)
@@ -43,8 +43,18 @@ void AstFuncDefParams::propagate_property_and_defpos() {
     }
 }
 
-///// lookup name
+///// complete tree phase
 
-void AstCompUnit::lookup_name() {
-    NameLooker(this).lookup_main();
+void AstCompUnit::complete_tree() {
+    TreeCompleter(this).complete_tree_main();
+}
+
+void AstDef::calc_initval() {
+    if(ast_initval_or_null)
+        initval.calc_if_needed(ast_initval_or_null);
+    else { // no initval, default to 0
+        auto ptr = new AstInitVal(false);
+        ptr->val.single = new AstExpLiteral(0);
+        initval.calc_if_needed(ptr);
+    }
 }

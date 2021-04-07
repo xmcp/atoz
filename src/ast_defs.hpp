@@ -7,6 +7,7 @@ using std::vector;
 using std::string;
 
 #include "enum_defs.hpp"
+#include "index_scanner.hpp"
 
 extern int yylineno;
 extern int atoz_yycol;
@@ -39,19 +40,23 @@ struct Ast {
 };
 
 struct ConstExpResult {
+    bool iserror;
     string error;
     int val;
 
 private:
-    ConstExpResult(string error, int val):
-        error(error), val(val) {}
+    ConstExpResult(bool iserror, string error, int val):
+        iserror(iserror), error(error), val(val) {}
 
 public:
+    ConstExpResult(int val):
+        iserror(false), error(""), val(val) {}
+
     static ConstExpResult asValue(int val) {
-        return ConstExpResult("", val);
+        return ConstExpResult(val);
     }
     static ConstExpResult asError(string error) {
-        return ConstExpResult(error, 0);
+        return ConstExpResult(true, error, 0);
     }
 };
 
@@ -63,7 +68,7 @@ struct AstCompUnit: Ast {
     AstCompUnit() {}
     void push_val(Ast *next);
 
-    void lookup_name();
+    void complete_tree();
 };
 
 struct AstDecl: Ast {
@@ -92,7 +97,8 @@ struct AstDefs: Ast {
 struct AstDef: Ast {
     string name;
     AstMaybeIdx *idxinfo;
-    AstInitVal *initval_or_null;
+    AstInitVal *ast_initval_or_null;
+    InitVal initval;
 
     // will be propagated
     VarType type;
@@ -101,8 +107,9 @@ struct AstDef: Ast {
     int index;
 
     AstDef(string var_name, AstMaybeIdx *idxinfo, AstInitVal *initval):
-        name(var_name), idxinfo(idxinfo), initval_or_null(initval),
-        type(VarInt), is_const(false), pos(DefUnknown), index(-1) {}
+            name(var_name), idxinfo(idxinfo), ast_initval_or_null(initval), initval(idxinfo),
+            type(VarInt), is_const(false), pos(DefUnknown), index(-1) {}
+    void calc_initval();
 };
 
 struct AstMaybeIdx: Ast {
