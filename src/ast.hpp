@@ -84,7 +84,7 @@ struct AstDecl: Ast {
     
     void propagate_property();
     void propagate_defpos(DefPosition pos);
-    void gen_eeyore(bool incl_decl);
+    void gen_eeyore(bool is_global);
 };
 
 struct AstDefs: Ast {
@@ -115,7 +115,7 @@ struct AstDef: Ast {
             type(VarInt), is_const(false), pos(DefUnknown), index(-1) {}
     void calc_initval();
     void gen_eeyore_decl();
-    void gen_eeyore_init();
+    void gen_eeyore_init(bool is_global);
 };
 
 struct AstMaybeIdx: Ast {

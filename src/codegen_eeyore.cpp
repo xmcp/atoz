@@ -31,13 +31,13 @@ void AstCompUnit::gen_eeyore() {
             ((AstFuncDef*)sub)->gen_eeyore();
 }
 
-void AstDecl::gen_eeyore(bool incl_decl) {
-    if(incl_decl) {
+void AstDecl::gen_eeyore(bool is_global) {
+    if(is_global) { // decl for local vars are handled in FuncDef
         for(auto *def: defs->val)
             def->gen_eeyore_decl();
     }
     for(auto *def: defs->val)
-        def->gen_eeyore_init();
+        def->gen_eeyore_init(is_global);
 }
 
 void AstDef::gen_eeyore_decl() {
@@ -50,12 +50,35 @@ void AstDef::gen_eeyore_decl() {
         outasm("var %d T%d // decl - array %s", initval.totelems*4, index, name.c_str());
 }
 
-void AstDef::gen_eeyore_init() {
-    for(int i=0; i<initval.totelems; i++)
-        if(initval.value[i] != nullptr) {
-            int trval = initval.value[i]->gen_eeyore();
-            outasm("T%d [%d] = t%d // init %s #%d/%d", index, i*4, trval, name.c_str(), i, initval.totelems);
+void AstDef::gen_eeyore_init(bool is_global) {
+    if(idxinfo->val.empty()) { // primitive
+        if(initval.value[0] != nullptr) {
+            if(is_global) { // global: use constexpr init
+                auto constres = initval.value[0]->calc_const();
+                if(constres.iserror)
+                    generror("initializer for global var %s not constant", name.c_str());
+
+                outasm("T%d = %d // init %s global", index, constres.val, name.c_str());
+            } else { // local: use dynamic init
+                int trval = initval.value[0]->gen_eeyore();
+                outasm("T%d = t%d // init %s local", index, trval, name.c_str());
+            }
         }
+    } else { // array
+        for(int i=0; i<initval.totelems; i++)
+            if(initval.value[i] != nullptr) {
+                if(is_global) { // global: use constexpr init
+                    auto constres = initval.value[i]->calc_const();
+                    if(constres.iserror)
+                        generror("initializer for global var %s not constant", name.c_str());
+
+                    outasm("T%d [%d] = %d // init %s global #%d/%d", index, i*4, constres.val, name.c_str(), i, initval.totelems);
+                } else { // local: use dynamic init
+                    int trval = initval.value[i]->gen_eeyore();
+                    outasm("T%d [%d] = t%d // init %s local #%d/%d", index, i*4, trval, name.c_str(), i, initval.totelems);
+                }
+            }
+    }
 }
 
 
