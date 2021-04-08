@@ -58,6 +58,9 @@ public:
     static ConstExpResult asError(string error) {
         return ConstExpResult(true, error, 0);
     }
+    bool isalways(int v) {
+        return !iserror && val==v;
+    }
 };
 
 ///// LANGUAGE CONSTRUCTS
@@ -289,8 +292,22 @@ struct AstStmtReturn: AstStmt {
 ///// EXPRESSION
 
 struct AstExp: Ast {
+private:
+    ConstExpResult const_cache;
+    bool const_calculated;
+
+public:
+    AstExp(): const_calculated(false), const_cache(0) {}
+
     virtual ConstExpResult calc_const() = 0;
     virtual int gen_eeyore() = 0; // return tmp label
+    ConstExpResult get_const() {
+        if(!const_calculated) {
+            const_cache = calc_const();
+            const_calculated = true;
+        }
+        return const_cache;
+    }
 };
 
 struct AstExpLVal: AstExp {

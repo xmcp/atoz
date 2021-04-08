@@ -15,7 +15,7 @@ InitVal::InitVal():
 
 void InitVal::init(AstMaybeIdx *shapeinfo) {
     for(auto exp: shapeinfo->val) {
-        auto res = exp->calc_const();
+        auto res = exp->get_const();
         if(res.iserror)
             scanerror("shape not const: %s", res.error.c_str());
         if(res.val<0)
@@ -82,15 +82,12 @@ AstExp *InitVal::getoffset_bytes(AstMaybeIdx *idxinfo, bool allowpartial) {
     for(auto exp: idxinfo->val) {
         step /= shape[dim];
         // idx = idx + step * exp
-        idx = strip_location(new AstExpOpBinary(
-                OpPlus,
-                idx,
-                strip_location(new AstExpOpBinary(
-                        OpMul,
-                        strip_location(new AstExpLiteral(step)),
-                        exp
-                ))
+        AstExp *next = step==1 ? exp : strip_location(new AstExpOpBinary(
+                OpMul,
+                strip_location(new AstExpLiteral(step)),
+                exp
         ));
+        idx = idx->get_const().isalways(0) ? next : strip_location(new AstExpOpBinary(OpPlus, idx, next));
         dim++;
     }
     return strip_location(new AstExpOpBinary(
@@ -103,16 +100,19 @@ AstExp *InitVal::getoffset_bytes(AstMaybeIdx *idxinfo, bool allowpartial) {
 int InitVal::getvalue(AstMaybeIdx *idxinfo) {
     AstExp *offset = getoffset_bytes(idxinfo, false);
 
-    ConstExpResult res = offset->calc_const();
+    ConstExpResult res = offset->get_const();
     if(res.iserror)
         scanerror("index not const: %s", res.error.c_str());
 
     int idx = res.val;
-    AstExp *exp = value[idx];
+    if(idx%4)
+        scanerror("index not aligned: got %d", idx);
+
+    AstExp *exp = value[idx/4];
     if(!exp) // not initialized
         return 0;
 
-    res = exp->calc_const();
+    res = exp->get_const();
     if(res.iserror)
         scanerror("array value at %d not const: %s", idx, res.error.c_str());
 

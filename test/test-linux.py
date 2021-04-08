@@ -4,9 +4,9 @@ from tqdm import tqdm
 
 run_cmd_willsucc('make clean')
 print('making compiler')
-run_cmd_willsucc('make', 30)
+run_cmd_willsucc('make', 40)
 
-for p in tqdm(sorted(list(pathlib.Path('.').glob('testcases/**/functional*/*.sy')))):
+for p in tqdm(sorted(list(pathlib.Path('.').glob('testcases/**/*.sy')))):
     #print('trying', p)
     out = run_cmd_willsucc(f'build/compiler {p}')
 

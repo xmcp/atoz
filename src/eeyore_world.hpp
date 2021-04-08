@@ -48,11 +48,11 @@ struct EEyoreWorld {
 
         return tvar;
     }
-    void print() {
-        printf("///// BEGIN EEYORE\n");
+    void print(FILE *f) {
+        fprintf(f, "///// BEGIN EEYORE\n");
         for(const auto& inst: *instructions)
-            printf("%s\n", inst.c_str());
-        printf("///// END EEYORE\n");
+            fprintf(f, "%s\n", inst.c_str());
+        fprintf(f, "///// END EEYORE\n");
     }
 };
 

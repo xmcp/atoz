@@ -68,7 +68,7 @@ ConstExpResult AstExpFunctionCall::calc_const() {
 }
 
 ConstExpResult AstExpOpUnary::calc_const() {
-    ConstExpResult val = operand->calc_const();
+    ConstExpResult val = operand->get_const();
     if(val.iserror)
         return val;
 
@@ -76,10 +76,10 @@ ConstExpResult AstExpOpUnary::calc_const() {
 }
 
 ConstExpResult AstExpOpBinary::calc_const() {
-    ConstExpResult val1 = operand1->calc_const();
+    ConstExpResult val1 = operand1->get_const();
     if(val1.iserror)
         return val1;
-    ConstExpResult val2 = operand2->calc_const();
+    ConstExpResult val2 = operand2->get_const();
     if(val2.iserror)
         return val2;
 
