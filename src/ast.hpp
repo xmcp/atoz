@@ -63,6 +63,38 @@ public:
     }
 };
 
+struct ConstOrVar {
+    enum ConstOrVarType {
+        Reference, ConstExp, TempVar
+    } type;
+    union {
+        AstDef *reference;
+        int constexp;
+        int tempvar;
+    } val;
+
+private:
+    ConstOrVar(ConstOrVarType type): type(type), val({}) {}
+
+public:
+    const char *eeyore_ref();
+    static ConstOrVar asReference(AstDef* ref) {
+        ConstOrVar ret(Reference);
+        ret.val.reference = ref;
+        return ret;
+    }
+    static ConstOrVar asConstExp(int val) {
+        ConstOrVar ret(ConstExp);
+        ret.val.constexp = val;
+        return ret;
+    }
+    static ConstOrVar asTempVar(int tidx) {
+        ConstOrVar ret(TempVar);
+        ret.val.tempvar = tidx;
+        return ret;
+    }
+};
+
 ///// LANGUAGE CONSTRUCTS
 
 struct AstCompUnit: Ast {
@@ -300,7 +332,7 @@ public:
     AstExp(): const_calculated(false), const_cache(0) {}
 
     virtual ConstExpResult calc_const() = 0;
-    virtual int gen_eeyore() = 0; // return tmp label
+    virtual ConstOrVar gen_eeyore() = 0; // return tmp label
     ConstExpResult get_const() {
         if(!const_calculated) {
             const_cache = calc_const();
@@ -322,7 +354,7 @@ struct AstExpLVal: AstExp {
         name(name), idxinfo(idxinfo),
         def(nullptr), dim_left(-1) {}
     ConstExpResult calc_const() override;
-    int gen_eeyore() override;
+    ConstOrVar gen_eeyore() override;
 };
 
 struct AstExpLiteral: AstExp {
@@ -330,7 +362,7 @@ struct AstExpLiteral: AstExp {
 
     AstExpLiteral(int val): val(val) {}
     ConstExpResult calc_const() override;
-    int gen_eeyore() override;
+    ConstOrVar gen_eeyore() override;
 };
 
 struct AstExpFunctionCall: AstExp {
@@ -344,7 +376,7 @@ struct AstExpFunctionCall: AstExp {
         name(name), params(params),
         def(nullptr) {}
     ConstExpResult calc_const() override;
-    int gen_eeyore() override;
+    ConstOrVar gen_eeyore() override;
 };
 
 struct AstExpOpUnary: AstExp {
@@ -354,7 +386,7 @@ struct AstExpOpUnary: AstExp {
     AstExpOpUnary(UnaryOpKinds op, AstExp *operand):
         op(op), operand(operand) {}
     ConstExpResult calc_const() override;
-    int gen_eeyore() override;
+    ConstOrVar gen_eeyore() override;
 };
 
 struct AstExpOpBinary: AstExp {
@@ -365,5 +397,5 @@ struct AstExpOpBinary: AstExp {
     AstExpOpBinary(BinaryOpKinds op, AstExp *operand1, AstExp *operand2):
         op(op), operand1(operand1), operand2(operand2) {}
     ConstExpResult calc_const() override;
-    int gen_eeyore() override;
+    ConstOrVar gen_eeyore() override;
 };

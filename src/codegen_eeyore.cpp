@@ -25,6 +25,16 @@ using std::vector;
 
 static char instbuf[EEYORE_INST_BUFSIZE];
 
+const char *ConstOrVar::eeyore_ref() {
+    static char buf[16];
+    switch(type) {
+        case Reference: sprintf(buf, "%c%d", cdef(val.reference), val.reference->index); break;
+        case ConstExp: sprintf(buf, "%d", val.constexp); break;
+        case TempVar: sprintf(buf, "t%d", val.tempvar); break;
+    }
+    return buf;
+}
+
 void AstCompUnit::gen_eeyore() {
     for(auto *sub: val) // Decl, FuncDef
         if(istype(sub, AstDecl))
@@ -62,8 +72,8 @@ void AstDef::gen_eeyore_init(bool is_global) {
 
                 outasm("T%d = %d // init %s global", index, constres.val, name.c_str());
             } else { // local: use dynamic init
-                int trval = initval.value[0]->gen_eeyore();
-                outasm("T%d = t%d // init %s local", index, trval, name.c_str());
+                ConstOrVar trval = initval.value[0]->gen_eeyore();
+                outasm("T%d = %s // init %s local", index, trval.eeyore_ref(), name.c_str());
             }
         }
     } else { // array
@@ -76,8 +86,8 @@ void AstDef::gen_eeyore_init(bool is_global) {
 
                     outasm("T%d [%d] = %d // init %s global #%d/%d", index, i*4, constres.val, name.c_str(), i, initval.totelems);
                 } else { // local: use dynamic init
-                    int trval = initval.value[i]->gen_eeyore();
-                    outasm("T%d [%d] = t%d // init %s local #%d/%d", index, i*4, trval, name.c_str(), i, initval.totelems);
+                    ConstOrVar trval = initval.value[i]->gen_eeyore();
+                    outasm("T%d [%d] = %s // init %s local #%d/%d", index, i*4, trval.eeyore_ref(), name.c_str(), i, initval.totelems);
                 }
             }
     }
@@ -126,13 +136,13 @@ void AstFuncUseParams::gen_eeyore() {
         auto *lval = dynamic_cast<AstExpLVal*>(param);
         if(lval && lval->dim_left>0) { // pass array as pointer
             AstExp *idx = lval->def->initval.getoffset_bytes(lval->idxinfo, true);
-            int tidx = idx->gen_eeyore();
+            ConstOrVar tidx = idx->gen_eeyore();
             int trval = eeyore_world.gen_temp_var();
-            outasm("t%d = %c%d + t%d // useparam - array access", trval, cdef(lval->def), lval->def->index, tidx);
+            outasm("t%d = %c%d + %s // useparam - array access", trval, cdef(lval->def), lval->def->index, tidx.eeyore_ref());
             outasm("param t%d // useparam - array pass", trval);
         } else { // pass primitive
-            int trval = param->gen_eeyore();
-            outasm("param t%d // useparam - primitive", trval);
+            ConstOrVar trval = param->gen_eeyore();
+            outasm("param %s // useparam - primitive", trval.eeyore_ref());
         }
     }
 }
@@ -148,17 +158,17 @@ void AstBlock::gen_eeyore() {
 }
 
 void AstStmtAssignment::gen_eeyore() {
-    int trval = rval->gen_eeyore();
+    ConstOrVar trval = rval->gen_eeyore();
 
     if(lval->dim_left!=0)
         generror("assignment lval got dim %d for var %s", lval->dim_left, lval->name.c_str());
 
     if(!lval->idxinfo->val.empty()) { // has array index
         AstExp *idx = lval->def->initval.getoffset_bytes(lval->idxinfo, true);
-        int tlidx = idx->gen_eeyore();
-        outasm("%c%d [t%d] = t%d // assign", cdef(lval->def), lval->def->index, tlidx, trval);
+        ConstOrVar tlidx = idx->gen_eeyore();
+        outasm("%c%d [%s] = %s // assign", cdef(lval->def), lval->def->index, tlidx.eeyore_ref(), trval.eeyore_ref());
     } else { // plain value
-        outasm("%c%d = t%d // assign", cdef(lval->def), lval->def->index, trval);
+        outasm("%c%d = %s // assign", cdef(lval->def), lval->def->index, trval.eeyore_ref());
     }
 }
 
@@ -175,20 +185,20 @@ void AstStmtBlock::gen_eeyore() {
 }
 
 void AstStmtIfOnly::gen_eeyore() {
-    int tcond = cond->gen_eeyore();
+    ConstOrVar tcond = cond->gen_eeyore();
 
     int lskip = eeyore_world.gen_label();
-    outasm("if t%d == 0 goto l%d // ifonly", tcond, lskip);
+    outasm("if %s == 0 goto l%d // ifonly", tcond.eeyore_ref(), lskip);
 
     body->gen_eeyore();
     outasm("l%d: // ifonly - lskip", lskip);
 }
 
 void AstStmtIfElse::gen_eeyore() {
-    int tcond = cond->gen_eeyore();
+    ConstOrVar tcond = cond->gen_eeyore();
 
     int lfalse = eeyore_world.gen_label();
-    outasm("if t%d == 0 goto l%d // ifelse", tcond, lfalse);
+    outasm("if %s == 0 goto l%d // ifelse", tcond.eeyore_ref(), lfalse);
 
     body_true->gen_eeyore();
     int ldone = eeyore_world.gen_label();
@@ -206,8 +216,8 @@ void AstStmtWhile::gen_eeyore() {
 
     outasm("l%d: // while - ltest", ltest);
 
-    int tcond = cond->gen_eeyore();
-    outasm("if t%d == 0 goto l%d // while - done", tcond, ldone);
+    ConstOrVar tcond = cond->gen_eeyore();
+    outasm("if %s == 0 goto l%d // while - done", tcond.eeyore_ref(), ldone);
 
     body->gen_eeyore();
     outasm("goto l%d // while - totest", ltest);
@@ -227,87 +237,83 @@ void AstStmtReturnVoid::gen_eeyore() {
 }
 
 void AstStmtReturn::gen_eeyore() {
-    int tret = retval->gen_eeyore();
-    outasm("return t%d // return", tret);
+    ConstOrVar tret = retval->gen_eeyore();
+    outasm("return %s // return", tret.eeyore_ref());
 }
 
-int AstExpLVal::gen_eeyore() {
-    int tval = eeyore_world.gen_temp_var();
-
+ConstOrVar AstExpLVal::gen_eeyore() {
     if(dim_left!=0)
         generror("exp got dim %d for var %s", dim_left, name.c_str());
 
     if(!get_const().iserror) {
-        outasm("t%d = %d", tval, get_const().val);
-        return tval;
+        return ConstOrVar::asConstExp(get_const().val);
     }
+
+    int tval = eeyore_world.gen_temp_var();
 
     if(!def->idxinfo->val.empty()) {
         AstExp *idx = def->initval.getoffset_bytes(idxinfo, false);
-        int tidx = idx->gen_eeyore();
-        outasm("t%d = %c%d [t%d] // lval - array", tval, cdef(def), def->index, tidx);
+        ConstOrVar tidx = idx->gen_eeyore();
+        outasm("t%d = %c%d [%d] // lval - array", tval, cdef(def), def->index, tidx.eeyore_ref());
     } else {
+
         outasm("t%d = %c%d // lval - primitive", tval, cdef(def), def->index);
     }
-    return tval;
+    return ConstOrVar::asTempVar(tval);
 }
 
-int AstExpLiteral::gen_eeyore() {
-    int tval = eeyore_world.gen_temp_var();
-    outasm("t%d = %d", tval, val);
-    return tval;
+ConstOrVar AstExpLiteral::gen_eeyore() {
+    return ConstOrVar::asConstExp(val);
 }
 
-int AstExpFunctionCall::gen_eeyore() {
+ConstOrVar AstExpFunctionCall::gen_eeyore() {
     params->gen_eeyore();
 
     // special functions
     if(name=="starttime") {
         outasm("param %d // func call special", loc.lineno);
         outasm("call f__sysy_starttime // func call special");
-        return -1;
+        return ConstOrVar::asTempVar(-1);
     }
     if(name=="stoptime") {
         outasm("param %d // func call special", loc.lineno);
         outasm("call f__sysy_stoptime // func call special");
-        return -1;
+        return ConstOrVar::asTempVar(-1);
     }
 
     if(def->type==FuncVoid) {
         outasm("call f_%s", name.c_str());
-        return -1;
+        return ConstOrVar::asTempVar(-1);
     } else {
         int tret = eeyore_world.gen_temp_var();
         outasm("t%d = call f_%s", tret, name.c_str());
-        return tret;
+        return ConstOrVar::asTempVar(tret);
     }
 }
 
-int AstExpOpUnary::gen_eeyore() {
-    int tret = eeyore_world.gen_temp_var();
-
+ConstOrVar AstExpOpUnary::gen_eeyore() {
     if(!get_const().iserror) {
-        outasm("t%d = %d // op unary const", tret, get_const().val);
-        return tret;
+        return ConstOrVar::asConstExp(get_const().val);
     }
 
-    int top = operand->gen_eeyore();
-    if(top<0)
+    int tret = eeyore_world.gen_temp_var();
+
+    ConstOrVar top = operand->gen_eeyore();
+    if(top.type==ConstOrVar::TempVar && top.val.tempvar<0)
         generror("unary operand not primitive");
 
-    outasm("t%d = %s t%d", tret, cvt_from_unary(op).c_str(), top);
-    return tret;
+    outasm("t%d = %s %s", tret, cvt_from_unary(op).c_str(), top.eeyore_ref());
+    return ConstOrVar::asTempVar(tret);
 }
 
-int AstExpOpBinary::gen_eeyore() {
-    int tret = eeyore_world.gen_temp_var();
-
+ConstOrVar AstExpOpBinary::gen_eeyore() {
     if(!get_const().iserror) {
-        outasm("t%d = %d // op binary const", tret, get_const().val);
-        return tret;
+        return ConstOrVar::asConstExp(get_const().val);
     }
 
-    int top1, top2;
+    int tret = eeyore_world.gen_temp_var();
+
+    ConstOrVar top1 = ConstOrVar::asConstExp(0), top2 = ConstOrVar::asConstExp(0);
     int lskip;
     
     // these ops will shortcircuit
@@ -316,36 +322,38 @@ int AstExpOpBinary::gen_eeyore() {
         lskip = eeyore_world.gen_label();
 
         top1 = operand1->gen_eeyore();
-        outasm("if t%d == 0 goto l%d // op and - test 1", top1, lskip);
+        outasm("if %s == 0 goto l%d // op and - test 1", top1.eeyore_ref(), lskip);
 
         top2 = operand2->gen_eeyore();
-        outasm("if t%d == 0 goto l%d // op and - test 2", top2, lskip);
+        outasm("if %s == 0 goto l%d // op and - test 2", top2.eeyore_ref(), lskip);
 
         outasm("t%d = 1 // op and - pass test", tret);
         outasm("l%d: // op and - lskip", lskip);
-        return tret;
+        return ConstOrVar::asTempVar(tret);
 
     } else if(op==OpOr) {
         outasm("t%d = 1 // op or - default value", tret);
         lskip = eeyore_world.gen_label();
 
         top1 = operand1->gen_eeyore();
-        outasm("if t%d != 0 goto l%d // op or - test 1", top1, lskip);
+        outasm("if %s != 0 goto l%d // op or - test 1", top1.eeyore_ref(), lskip);
 
         top2 = operand2->gen_eeyore();
-        outasm("if t%d != 0 goto l%d // op or - test 2", top2, lskip);
+        outasm("if %s != 0 goto l%d // op or - test 2", top2.eeyore_ref(), lskip);
 
         outasm("t%d = 0 // op or - pass test", tret);
         outasm("l%d: // op or - lskip", lskip);
-        return tret;
+        return ConstOrVar::asTempVar(tret);
     }
 
     // general binary ops
     top1 = operand1->gen_eeyore();
     top2 = operand2->gen_eeyore();
-    if(top1<0 || top2<0)
-        generror("binary operand not primitive");
+    if(top1.type==ConstOrVar::TempVar && top1.val.tempvar<0)
+        generror("binary operand1 not primitive");
+    if(top2.type==ConstOrVar::TempVar && top2.val.tempvar<0)
+        generror("binary operand2 not primitive");
 
     outasm("t%d = t%d %s t%d", tret, top1, cvt_from_binary(op).c_str(), top2);
-    return tret;
+    return ConstOrVar::asTempVar(tret);
 }

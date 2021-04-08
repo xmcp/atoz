@@ -56,7 +56,7 @@ ConstExpResult AstExpLVal::calc_const() {
         return ConstExpResult::asError("lval not const");
 
     def->initval.calc_if_needed(def->ast_initval_or_null);
-    return def->initval.getvalue(def->idxinfo);
+    return def->initval.getvalue(idxinfo);
 }
 
 ConstExpResult AstExpLiteral::calc_const() {
