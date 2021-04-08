@@ -123,7 +123,7 @@ void AstFuncUseParams::gen_eeyore() {
     for(auto *param: val) {
         auto *lval = dynamic_cast<AstExpLVal*>(param);
         if(lval && lval->dim_left>0) { // pass array as pointer
-            AstExp *idx = lval->def->initval.getoffset(lval->idxinfo, true);
+            AstExp *idx = lval->def->initval.getoffset_bytes(lval->idxinfo, true);
             int tidx = idx->gen_eeyore();
             int trval = eeyore_world.gen_temp_var();
             outasm("t%d = T%d [t%d] // useparam - array access", trval, lval->def->index, tidx);
@@ -152,7 +152,7 @@ void AstStmtAssignment::gen_eeyore() {
         generror("assignment lval got dim %d for var %s", lval->dim_left, lval->name.c_str());
 
     if(!lval->idxinfo->val.empty()) { // has array index
-        AstExp *idx = lval->def->initval.getoffset(lval->idxinfo, true);
+        AstExp *idx = lval->def->initval.getoffset_bytes(lval->idxinfo, true);
         int tlidx = idx->gen_eeyore();
         outasm("T%d [t%d] = t%d // assign", lval->def->index, tlidx, trval);
     } else { // plain value
@@ -236,7 +236,7 @@ int AstExpLVal::gen_eeyore() {
         generror("exp got dim %d for var %s", dim_left, name.c_str());
 
     if(!def->idxinfo->val.empty()) {
-        AstExp *idx = def->initval.getoffset(idxinfo, false);
+        AstExp *idx = def->initval.getoffset_bytes(idxinfo, false);
         int tidx = idx->gen_eeyore();
         outasm("t%d = T%d [t%d] // lval - array", tval, def->index, tidx);
     } else {

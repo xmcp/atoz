@@ -28,6 +28,6 @@ public:
             calculated = true;
         }
     }
-    AstExp *getoffset(AstMaybeIdx *idxinfo, bool allowpartial);
+    AstExp *getoffset_bytes(AstMaybeIdx *idxinfo, bool allowpartial);
     int getvalue(AstMaybeIdx *idxinfo);
 };

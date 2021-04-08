@@ -67,7 +67,7 @@ T *strip_location(T *node) {
     return node;
 }
 
-AstExp *InitVal::getoffset(AstMaybeIdx *idxinfo, bool allowpartial) {
+AstExp *InitVal::getoffset_bytes(AstMaybeIdx *idxinfo, bool allowpartial) {
     if(allowpartial) {
         if(idxinfo->val.size()>shape.size())
             scanerror("offset shape too deep: item depth %d, offset %d", (int)shape.size(), (int)idxinfo->val.size());
@@ -93,11 +93,15 @@ AstExp *InitVal::getoffset(AstMaybeIdx *idxinfo, bool allowpartial) {
         ));
         dim++;
     }
-    return idx;
+    return strip_location(new AstExpOpBinary(
+        OpMul,
+        strip_location(new AstExpLiteral(4)),
+        idx
+    ));
 }
 
 int InitVal::getvalue(AstMaybeIdx *idxinfo) {
-    AstExp *offset = getoffset(idxinfo, false);
+    AstExp *offset = getoffset_bytes(idxinfo, false);
 
     ConstExpResult res = offset->calc_const();
     if(res.iserror)
