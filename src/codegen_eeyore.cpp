@@ -39,35 +39,45 @@ void AstDef::gen_eeyore_decl() {
         return;
 
     if(idxinfo->val.empty())
-        outasm("var T%d", index);
+        outasm("var T%d // decl - primitive %s", index, name.c_str());
     else
-        outasm("var %d T%d", initval.totelems*4, index);
+        outasm("var %d T%d // decl - array %s", initval.totelems*4, index, name.c_str());
 }
 
 void AstDef::gen_eeyore_init() {
     for(int i=0; i<initval.totelems; i++)
         if(initval.value[i] != nullptr) {
-            initval.value[i]->gen_eeyore();
-            int trval = eeyore_world.temp_var_top;
-            outasm("T%d [%d] = t%d", index, i, trval);
+            int trval = initval.value[i]->gen_eeyore();
+            outasm("T%d [%d] = t%d // init %s #%d/%d", index, i*4, trval, name.c_str(), i, initval.totelems);
         }
 }
 
 
 void AstFuncDef::gen_eeyore() {
+    outasm("f_%s [%d] // funcdef - begin", name.c_str(), (int)params->val.size());
+
     for(auto *def: defs_inside)
         def->gen_eeyore_decl();
     for(auto *def: defs_inside)
         def->gen_eeyore_init();
 
     body->gen_eeyore();
+    outasm("end f_%s // funcdef - end", name.c_str());
 }
 
 void AstFuncUseParams::gen_eeyore() {
     for(auto *param: val) {
-        param->gen_eeyore();
-        int trval = eeyore_world.temp_var_top;
-        outasm("param t%d", trval);
+        auto *lval = dynamic_cast<AstExpLVal*>(param);
+        if(lval && lval->dim_left>0) { // pass array as pointer
+            AstExp *idx = lval->def->initval.getoffset(lval->idxinfo, true);
+            int tidx = idx->gen_eeyore();
+            int trval = eeyore_world.gen_temp_var();
+            outasm("t%d = T%d [t%d] // useparam - array access", trval, lval->def->index, tidx);
+            outasm("param t%d // useparam - array pass", trval);
+        } else { // pass primitive
+            int trval = param->gen_eeyore();
+            outasm("param t%d // useparam - primitive", trval);
+        }
     }
 }
 
@@ -78,16 +88,17 @@ void AstBlock::gen_eeyore() {
 }
 
 void AstStmtAssignment::gen_eeyore() {
-    rval->gen_eeyore();
-    int trval = eeyore_world.temp_var_top;
+    int trval = rval->gen_eeyore();
+
+    if(lval->dim_left!=0)
+        generror("assignment lval got dim %d for var %s", lval->dim_left, lval->name.c_str());
 
     if(!lval->idxinfo->val.empty()) { // has array index
         AstExp *idx = lval->def->initval.getoffset(lval->idxinfo, true);
-        idx->gen_eeyore();
-        int tlidx = eeyore_world.temp_var_top;
-        outasm("T%d [t%d] = t%d", lval->def->index, tlidx, trval);
+        int tlidx = idx->gen_eeyore();
+        outasm("T%d [t%d] = t%d // assign", lval->def->index, tlidx, trval);
     } else { // plain value
-        outasm("T%d = t%d", lval->def->index, trval);
+        outasm("T%d = t%d // assign", lval->def->index, trval);
     }
 }
 
@@ -96,7 +107,7 @@ void AstStmtExp::gen_eeyore() {
 }
 
 void AstStmtVoid::gen_eeyore() {
-    // empty
+    outasm("// stmtvoid");
 }
 
 void AstStmtBlock::gen_eeyore() {
@@ -104,56 +115,114 @@ void AstStmtBlock::gen_eeyore() {
 }
 
 void AstStmtIfOnly::gen_eeyore() {
-    cond->gen_eeyore();
-    int tcond = eeyore_world.temp_var_top;
+    int tcond = cond->gen_eeyore();
 
     int lskip = eeyore_world.gen_label();
-    outasm("if t%d == 0 goto l%d", tcond, lskip);
+    outasm("if t%d == 0 goto l%d // ifonly", tcond, lskip);
 
     body->gen_eeyore();
-    outasm("l%d:", lskip);
+    outasm("l%d: // ifonly - lskip", lskip);
 }
 
 void AstStmtIfElse::gen_eeyore() {
-    
+    int tcond = cond->gen_eeyore();
+
+    int lfalse = eeyore_world.gen_label();
+    outasm("if t%d == 0 goto l%d // ifelse", tcond, lfalse);
+
+    body_true->gen_eeyore();
+    int ldone = eeyore_world.gen_label();
+    outasm("goto l%d // ifelse - truedone", ldone);
+
+    outasm("l%d: // ifelse - lfalse", lfalse);
+    body_false->gen_eeyore();
+
+    outasm("l%d: // ifelse - ldone", ldone);
 }
 
 void AstStmtWhile::gen_eeyore() {
-    
+    ltest = eeyore_world.gen_label();
+    ldone = eeyore_world.gen_label();
+
+    outasm("l%d: // while - ltest", ltest);
+
+    int tcond = cond->gen_eeyore();
+    outasm("if t%d == 0 goto l%d // while - done", tcond, ldone);
+
+    body->gen_eeyore();
+    outasm("goto l%d // while - totest", ltest);
+    outasm("l%d: // while - ldone", ldone);
 }
 
 void AstStmtBreak::gen_eeyore() {
-    
+    outasm("goto l%d // break", loop->ldone);
 }
 
 void AstStmtContinue::gen_eeyore() {
-    
+    outasm("goto l%d // continue", loop->ltest);
 }
 
 void AstStmtReturnVoid::gen_eeyore() {
-    
+    outasm("return");
 }
 
 void AstStmtReturn::gen_eeyore() {
-    
+    int tret = retval->gen_eeyore();
+    outasm("return t%d // return", tret);
 }
 
-void AstExpLVal::gen_eeyore() {
+int AstExpLVal::gen_eeyore() {
+    int tval = eeyore_world.gen_temp_var();
 
+    if(dim_left!=0)
+        generror("exp got dim %d for var %s", dim_left, name.c_str());
+
+    if(!def->idxinfo->val.empty()) {
+        AstExp *idx = def->initval.getoffset(idxinfo, false);
+        int tidx = idx->gen_eeyore();
+        outasm("t%d = T%d [t%d] // lval - array", tval, def->index, tidx);
+    } else {
+        outasm("t%d = T%d // lval - primitive", tval, def->index);
+    }
+    return tval;
 }
 
-void AstExpLiteral::gen_eeyore() {
-
+int AstExpLiteral::gen_eeyore() {
+    int tval = eeyore_world.gen_temp_var();
+    outasm("t%d = %d", tval, val);
+    return tval;
 }
 
-void AstExpFunctionCall::gen_eeyore() {
+int AstExpFunctionCall::gen_eeyore() {
+    params->gen_eeyore();
 
+    if(def->type==FuncVoid) {
+        outasm("call f_%s", name.c_str());
+        return -1;
+    } else {
+        int tret = eeyore_world.gen_temp_var();
+        outasm("t%d = call f_%s", tret, name.c_str());
+        return tret;
+    }
 }
 
-void AstExpOpUnary::gen_eeyore() {
+int AstExpOpUnary::gen_eeyore() {
+    int top = operand->gen_eeyore();
+    if(top<0)
+        generror("unary operand not primitive");
 
+    int tret = eeyore_world.gen_temp_var();
+    outasm("t%d = %s t%d", tret, cvt_from_unary(op).c_str(), top);
+    return tret;
 }
 
-void AstExpOpBinary::gen_eeyore() {
+int AstExpOpBinary::gen_eeyore() {
+    int top1 = operand1->gen_eeyore();
+    int top2 = operand2->gen_eeyore();
+    if(top1<0 || top2<0)
+        generror("binary operand not primitive");
 
+    int tret = eeyore_world.gen_temp_var();
+    outasm("t%d = t%d %s t%d", tret, top1, cvt_from_binary(op).c_str(), top2);
+    return tret;
 }

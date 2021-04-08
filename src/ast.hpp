@@ -101,13 +101,13 @@ struct AstDef: Ast {
     AstMaybeIdx *idxinfo;
     AstInitVal *ast_initval_or_null;
 
-    // will be propagated
+    // in yyparse phase
     VarType type;
     bool is_const;
     DefPosition pos;
     int index;
 
-    // calculated in tree completing phase
+    // in tree completing phase
     InitVal initval;
 
     AstDef(string var_name, AstMaybeIdx *idxinfo, AstInitVal *ast_initval):
@@ -150,7 +150,7 @@ struct AstFuncDef: Ast {
     AstFuncDefParams *params;
     AstBlock *body;
 
-    // calculated in tree completing phase
+    // in tree completing phase
     vector<AstDef*> defs_inside;
 
     AstFuncDef(FuncType type, string func_name, AstFuncDefParams *params, AstBlock *body):
@@ -248,18 +248,28 @@ struct AstStmtWhile: AstStmt {
     AstExp *cond;
     AstStmt *body;
 
+    // in gen eeyore phase
+    int ltest;
+    int ldone;
+
     AstStmtWhile(AstExp *cond, AstStmt *body): AstStmt(StmtWhile),
         cond(cond), body(body) {}
     void gen_eeyore() override;
 };
 
 struct AstStmtBreak: AstStmt {
-    AstStmtBreak(): AstStmt(StmtBreak) {}
+    // in tree completing phase
+    AstStmtWhile *loop;
+
+    AstStmtBreak(): AstStmt(StmtBreak), loop(nullptr) {}
     void gen_eeyore() override;
 };
 
 struct AstStmtContinue: AstStmt {
-    AstStmtContinue(): AstStmt(StmtContinue) {}
+    // in tree completing phase
+    AstStmtWhile *loop;
+
+    AstStmtContinue(): AstStmt(StmtContinue), loop(nullptr) {}
     void gen_eeyore() override;
 };
 
@@ -280,19 +290,22 @@ struct AstStmtReturn: AstStmt {
 
 struct AstExp: Ast {
     virtual ConstExpResult calc_const() = 0;
-    virtual void gen_eeyore() = 0;
+    virtual int gen_eeyore() = 0; // return tmp label
 };
 
 struct AstExpLVal: AstExp {
     string name;
-    AstDef *def;
     AstMaybeIdx *idxinfo;
+
+    // in tree completing phase
+    AstDef *def;
+    int dim_left;
 
     AstExpLVal(string name, AstMaybeIdx *idxinfo):
         name(name), idxinfo(idxinfo),
-        def(nullptr) {}
+        def(nullptr), dim_left(-1) {}
     ConstExpResult calc_const() override;
-    void gen_eeyore() override;
+    int gen_eeyore() override;
 };
 
 struct AstExpLiteral: AstExp {
@@ -300,19 +313,21 @@ struct AstExpLiteral: AstExp {
 
     AstExpLiteral(int val): val(val) {}
     ConstExpResult calc_const() override;
-    void gen_eeyore() override;
+    int gen_eeyore() override;
 };
 
 struct AstExpFunctionCall: AstExp {
     string name;
-    AstFuncDef *def;
     AstFuncUseParams *params;
+
+    // in tree completing phase
+    AstFuncDef *def;
 
     AstExpFunctionCall(string name, AstFuncUseParams *params):
         name(name), params(params),
         def(nullptr) {}
     ConstExpResult calc_const() override;
-    void gen_eeyore() override;
+    int gen_eeyore() override;
 };
 
 struct AstExpOpUnary: AstExp {
@@ -322,7 +337,7 @@ struct AstExpOpUnary: AstExp {
     AstExpOpUnary(UnaryOpKinds op, AstExp *operand):
         op(op), operand(operand) {}
     ConstExpResult calc_const() override;
-    void gen_eeyore() override;
+    int gen_eeyore() override;
 };
 
 struct AstExpOpBinary: AstExp {
@@ -333,5 +348,5 @@ struct AstExpOpBinary: AstExp {
     AstExpOpBinary(BinaryOpKinds op, AstExp *operand1, AstExp *operand2):
         op(op), operand1(operand1), operand2(operand2) {}
     ConstExpResult calc_const() override;
-    void gen_eeyore() override;
+    int gen_eeyore() override;
 };

@@ -1,10 +1,8 @@
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "readability-convert-member-functions-to-static"
-
 /**
  * In this phase, we construct a complete AST from parse result.
  * Variable (function) names are mapped to its def.
  * We also parse initval and array index here.
+ * Some type checking are done.
  */
 
 #include <unordered_map>
@@ -22,16 +20,22 @@ using std::make_pair;
     exit(1); \
 } while(0)
 
+#define typeerror(...) do { \
+    printf("type error: "); \
+    printf(__VA_ARGS__ ); \
+    exit(1); \
+} while(0)
+
 template<typename T>
 class StackedTable {
     unordered_map<string, T*> table;
-    vector<T*> *reporter;
+    bool notfound_ok;
 
 public:
     StackedTable *parent;
 
-    StackedTable(StackedTable *parent, vector<T*> *reporter):
-        parent(parent), reporter(reporter) {
+    StackedTable(StackedTable *parent, bool notfound_ok):
+        parent(parent), notfound_ok(notfound_ok) {
         //printf("new %x from %x\n", (int)(long long)this, (int)(long long)parent);
     }
 
@@ -43,9 +47,6 @@ public:
             lookuperror("duplicate symbol: %s", name.c_str());
 
         table.insert(make_pair(name, val));
-
-        if(reporter)
-            reporter->push_back(val);
     }
 
     T *get(string name) {
@@ -54,8 +55,10 @@ public:
         auto it = table.find(name);
         if(it==table.end()) {
             if(!parent) {
-                lookuperror("unknown symbol: %s", name.c_str());
-                //return nullptr; // impossible
+                if(notfound_ok)
+                    return nullptr; // impossible
+                else
+                    lookuperror("unknown symbol: %s", name.c_str());
             } else
                 return parent->get(name);
         }
@@ -68,12 +71,12 @@ class SymTable {
 public:
     StackedTable<AstFuncDef> func;
     StackedTable<AstDef> var;
-    vector<AstDef*> *reporter;
+    StackedTable<Ast> special;
 
-    SymTable(SymTable *parent, vector<AstDef*> *reporter):
-        func(parent ? &parent->func : nullptr, nullptr),
-        var(parent ? &parent->var : nullptr, reporter),
-        reporter(reporter) {}
+    SymTable(SymTable *parent):
+        func(parent ? &parent->func : nullptr, false),
+        var(parent ? &parent->var : nullptr, false),
+        special(parent ? &parent->special : nullptr, true) {}
 };
 
 class TreeCompleter {
@@ -107,6 +110,14 @@ public:
         }
         node->calc_initval();
         tbl->var.put(node->name, node);
+
+        if(node->pos==DefLocal) {
+            AstFuncDef *func = (AstFuncDef*)tbl->special.get("FuncDef");
+            if(!func)
+                lookuperror("local var not in funcdef scope: %s", node->name.c_str());
+            func->defs_inside.push_back(node);
+        }
+
     }
 
     void visit(AstMaybeIdx *node, SymTable *tbl) {
@@ -122,9 +133,8 @@ public:
 
     void visit(AstFuncDef *node, SymTable *tbl) {
         tbl->func.put(node->name, node);
-        if(tbl->reporter)
-            lookuperror("name reporter not null outside funcdef %s", node->name.c_str());
-        tbl = new SymTable(tbl, &node->defs_inside);
+        tbl = new SymTable(tbl);
+        tbl->special.put("FuncDef", node);
         visit(node->params, tbl); // params are in local scope
         visit(node->body, tbl);
         delete tbl;
@@ -139,7 +149,7 @@ public:
     }
 
     void visit(AstBlock *node, SymTable *tbl) {
-        tbl = new SymTable(tbl, tbl->reporter);
+        tbl = new SymTable(tbl);
         visitall(node->body);
         delete tbl;
     }
@@ -172,27 +182,53 @@ public:
 
     void visit(AstStmtWhile *node, SymTable *tbl) {
         visit(node->cond, tbl);
+        tbl = new SymTable(tbl);
+        tbl->special.put("StmtWhile", node);
         visit(node->body, tbl);
+        delete tbl;
     }
 
-    void visit(AstStmtBreak *node, SymTable *tbl) {}
+    void visit(AstStmtBreak *node, SymTable *tbl) {
+        AstStmtWhile *loop = (AstStmtWhile*)tbl->special.get("StmtWhile");
+        if(!loop)
+            typeerror("break stmt not in loop");
+        node->loop = loop;
+    }
 
-    void visit(AstStmtContinue *node, SymTable *tbl) {}
+    void visit(AstStmtContinue *node, SymTable *tbl) {
+        AstStmtWhile *loop = (AstStmtWhile*)tbl->special.get("StmtWhile");
+        if(!loop)
+            typeerror("continue stmt not in loop");
+        node->loop = loop;
+    }
 
-    void visit(AstStmtReturnVoid *node, SymTable *tbl) {}
+    void visit(AstStmtReturnVoid *node, SymTable *tbl) {
+        AstFuncDef *func = (AstFuncDef*)tbl->special.get("FuncDef");
+        if(!func)
+            typeerror("return void not in funcdef scope");
+        if(func->type!=FuncVoid)
+            typeerror("return void in non-void function %s", func->name.c_str());
+    }
 
     void visit(AstStmtReturn *node, SymTable *tbl) {
         visit(node->retval, tbl);
+
+        AstFuncDef *func = (AstFuncDef*)tbl->special.get("FuncDef");
+        if(!func)
+            typeerror("return not in funcdef scope");
+        if(func->type==FuncVoid)
+            typeerror("return in void function %s", func->name.c_str());
     }
 
     void visit(AstExpLVal *node, SymTable *tbl) {
         node->def = tbl->var.get(node->name);
-        if(node->def->idxinfo->val.size() != node->idxinfo->val.size())
-            lookuperror(
-                "lval shape mismatch: %s, expect %d, actual %d\n",
+        node->dim_left = (int)(node->def->idxinfo->val.size() - node->idxinfo->val.size());
+        if(node->dim_left<0)
+            typeerror(
+                "lval shape mismatch: %s, defined %d, index actual %d\n",
                 node->name.c_str(),
-                (int)node->idxinfo->val.size(),
-                (int)node->def->idxinfo->val.size()
+                (int)node->def->idxinfo->val.size(),
+                (int)node->idxinfo->val.size()
             );
         visit(node->idxinfo, tbl);
     }
@@ -201,13 +237,48 @@ public:
 
     void visit(AstExpFunctionCall *node, SymTable *tbl) {
         node->def = tbl->func.get(node->name);
+        visitall(node->params->val);
+
+        // check number of params
         if(node->def->params->val.size() != node->params->val.size())
-            lookuperror(
-                "param shape mismatch: %s, expect %d, actual %d\n",
+            typeerror(
+                "param number mismatch: %s, expect %d, actual %d\n",
                 node->name.c_str(),
                 (int)node->params->val.size(),
                 (int)node->def->params->val.size()
             );
+
+        // check each param depth
+        for(int i=0; i<(int)node->def->params->val.size(); i++) {
+            int expect_depth = node->def->params->val[i]->idxinfo->val.size();
+            auto *lval = dynamic_cast<AstExpLVal*>(node->params->val[i]);
+
+            if(expect_depth>0) { // expected array
+                if(!lval)
+                    typeerror("function `%s` param %d expects array", node->name.c_str(), i);
+                int var_depth = lval->def->idxinfo->val.size();
+                int idx_depth = lval->idxinfo->val.size();
+                if(expect_depth!=var_depth-idx_depth)
+                    typeerror(
+                        "function `%s` param %d expects depth %d but got %d - %d",
+                        node->name.c_str(), i,
+                        expect_depth, var_depth, idx_depth
+                    );
+            } else { // expected primitive
+                if(!lval) { // not a lval
+                    // good, because exp is always primitive
+                } else { // if is a lval, check depth should be 0
+                    int var_depth = lval->def->idxinfo->val.size();
+                    int idx_depth = lval->idxinfo->val.size();
+                    if(var_depth!=idx_depth)
+                        typeerror(
+                            "function `%s` param %d expects primitive but got %d - %d",
+                            node->name.c_str(), i,
+                            var_depth, idx_depth
+                        );
+                }
+            }
+        }
     }
 
     void visit(AstExpOpUnary *node, SymTable *tbl) {
@@ -307,10 +378,9 @@ public:
     }
 
     void complete_tree_main() {
-        auto *tbl = new SymTable(nullptr, nullptr);
+        auto *tbl = new SymTable(nullptr);
         install_builtin_names(tbl);
         visit(root, tbl);
         delete tbl;
     }
 };
-#pragma clang diagnostic pop

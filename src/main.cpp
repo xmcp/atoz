@@ -2,6 +2,7 @@
 using namespace std;
 
 #include "test_lexer.cpp"
+#include "eeyore_world.hpp"
 
 extern int yyparse();
 
@@ -28,6 +29,10 @@ int main(int argc, char **argv) {
     yyparse();
     printf("parsed, will complete tree\n");
     ast_root->complete_tree();
+    printf("will gen eeyore\n");
+    eeyore_world.clear();
+    ast_root->gen_eeyore();
+    eeyore_world.print();
 
     fclose(f);
     printf("TEST PASSED!\n");

@@ -9,6 +9,8 @@ ConstExpResult do_unary_op(UnaryOpKinds op, int val) {
             return -val;
         case OpNot:
             return !val;
+        default:
+            assert(false); return ConstExpResult::asError("impossible");
     }
 }
 
@@ -44,6 +46,8 @@ ConstExpResult do_binary_op(BinaryOpKinds op, int val1, int val2) {
             return val1&&val2;
         case OpOr:
             return val1||val2;
+        default:
+            assert(false); return ConstExpResult::asError("impossible");
     }
 }
 

@@ -26,7 +26,7 @@ void InitVal::init(AstMaybeIdx *shapeinfo) {
     }
     totelems = calcstep;
     value = new AstExp*[totelems];
-    memset(value, 0, sizeof(value));
+    memset(value, 0, totelems*sizeof(void*));
 }
 
 void InitVal::calc(AstInitVal *v) {

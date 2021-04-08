@@ -1,9 +1,8 @@
 #pragma once
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wreturn-type"
-
 #include <cassert>
+#include <string>
+using std::string;
 
 // lexer type
 
@@ -29,51 +28,88 @@ enum StmtKinds {
 };
 
 enum UnaryOpKinds {
-    OpPos, OpNeg, OpNot
+    OpPos, OpNeg, OpNot // + - !
 };
 
 enum BinaryOpKinds {
-    OpPlus, OpMinus, OpMul, OpDiv, OpMod,
-    OpLess, OpGreater, OpLeq, OpGeq, OpEq, OpNeq,
-    OpAnd, OpOr
+    OpPlus, OpMinus, OpMul, OpDiv, OpMod, // + - * / %
+    OpLess, OpGreater, OpLeq, OpGeq, OpEq, OpNeq, // < > <= >= == !=
+    OpAnd, OpOr // && ||
 };
 
 // helper func to conver lexer type -> parser type
 
 inline UnaryOpKinds cvt_to_unary(LexTypeAdd op) {
-    if(op==LexPlus) return OpPos;
-    if(op==LexMinus) return OpNeg;
-    assert(false);
+    switch(op) {
+        case LexPlus: return OpPos;
+        case LexMinus: return OpNeg;
+        default: assert(false);
+    }
 }
 
 inline BinaryOpKinds cvt_to_binary(LexTypeAdd op) {
-    if(op==LexPlus) return OpPlus;
-    if(op==LexMinus) return OpMinus;
-    assert(false);
+    switch(op) {
+        case LexPlus: return OpPlus;
+        case LexMinus: return OpMinus;
+        default: assert(false);
+    }
 }
 
 inline BinaryOpKinds cvt_to_binary(LexTypeMul op) {
-    if(op==LexMul) return OpMul;
-    if(op==LexDiv) return OpDiv;
-    if(op==LexMod) return OpMod;
-    assert(false);
+    switch(op) {
+        case LexMul: return OpMul;
+        case LexDiv: return OpDiv;
+        case LexMod: return OpMod;
+        default: assert(false);
+    }
 }
 
 inline BinaryOpKinds cvt_to_binary(LexTypeRel op) {
-    if(op==LexLess) return OpLess;
-    if(op==LexGreater) return OpGreater;
-    if(op==LexLeq) return OpLeq;
-    if(op==LexGeq) return OpGeq;
-    assert(false);
+    switch(op) {
+        case LexLess: return OpLess;
+        case LexGreater: return OpGreater;
+        case LexLeq: return OpLeq;
+        case LexGeq: return OpGeq;
+        default: assert(false);
+    }
 }
 
 inline BinaryOpKinds cvt_to_binary(LexTypeEq op) {
-    if(op==LexEq) return OpEq;
-    if(op==LexNeq) return OpNeq;
-    assert(false);
+    switch(op) {
+        case LexEq: return OpEq;
+        case LexNeq: return OpNeq;
+        default: assert(false);
+    }
+}
+
+inline string cvt_from_unary(UnaryOpKinds op) {
+    switch(op) {
+        case OpPos: return ""; // `t0 = t1` instead of `t0 = + t1`, because eeyore have no OpPos
+        case OpNeg: return "-";
+        case OpNot: return "!";
+        default: assert(false); return "";
+    }
+}
+
+inline string cvt_from_binary(BinaryOpKinds op) {
+    switch(op) {
+        case OpPlus: return "+";
+        case OpMinus: return "-";
+        case OpMul: return "*";
+        case OpDiv: return "/";
+        case OpMod: return "%";
+        case OpLess: return "<";
+        case OpGreater: return ">";
+        case OpLeq: return "<=";
+        case OpGeq: return ">=";
+        case OpEq: return "==";
+        case OpNeq: return "!=";
+        case OpAnd: return "&&";
+        case OpOr: return "||";
+        default: assert(false); return "";
+    }
 }
 
 // def position
 
 enum DefPosition { DefUnknown, DefGlobal, DefLocal, DefArg };
-#pragma clang diagnostic pop

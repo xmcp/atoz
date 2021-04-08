@@ -1,5 +1,5 @@
 #include "ast.hpp"
-#include "complete_tree_phase.cpp"
+#include "tree_completing.cpp"
 #include <cassert>
 
 #define istype(ptr,cls) (dynamic_cast<cls*>(ptr)!=nullptr)
@@ -53,9 +53,5 @@ void AstDef::calc_initval() {
     initval.init(idxinfo);
     if(ast_initval_or_null)
         initval.calc_if_needed(ast_initval_or_null);
-    else { // no initval, default to 0
-        auto ptr = new AstInitVal(false);
-        ptr->val.single = new AstExpLiteral(0);
-        initval.calc_if_needed(ptr);
-    }
+    // else: no initval, no need to init
 }

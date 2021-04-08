@@ -13,6 +13,11 @@ struct EEyoreWorld {
     vector<string> instructions;
 
     EEyoreWorld(): temp_var_top(-1), label_top(-1) {}
+    void clear() {
+        temp_var_top = -1;
+        label_top = -1;
+        instructions.clear();
+    }
     void push_instruction(char *buf) {
         instructions.push_back(string(buf));
     }
@@ -21,6 +26,12 @@ struct EEyoreWorld {
     }
     int gen_temp_var() {
         return ++temp_var_top;
+    }
+    void print() {
+        printf("///// BEGIN EEYORE\n");
+        for(const auto& inst: instructions)
+            printf("%s\n", inst.c_str());
+        printf("///// END EEYORE\n");
     }
 };
 
