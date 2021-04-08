@@ -26,14 +26,16 @@ static char instbuf[EEYORE_INST_BUFSIZE];
 void AstCompUnit::gen_eeyore() {
     for(auto *sub: val) // Decl, FuncDef
         if(istype(sub, AstDecl))
-            ((AstDecl*)sub)->gen_eeyore();
+            ((AstDecl*)sub)->gen_eeyore(true);
         else // FuncDef
             ((AstFuncDef*)sub)->gen_eeyore();
 }
 
-void AstDecl::gen_eeyore() {
-    for(auto *def: defs->val)
-        def->gen_eeyore_decl();
+void AstDecl::gen_eeyore(bool incl_decl) {
+    if(incl_decl) {
+        for(auto *def: defs->val)
+            def->gen_eeyore_decl();
+    }
     for(auto *def: defs->val)
         def->gen_eeyore_init();
 }
@@ -70,11 +72,9 @@ void AstFuncDef::gen_eeyore() {
         generror("nested funcdef: %s", name.c_str());
     eeyore_world.should_emit_temp_var = false;
 
-    // gen decl and init for body
+    // gen decl for body
     for(auto *def: defs_inside)
         def->gen_eeyore_decl();
-    for(auto *def: defs_inside)
-        def->gen_eeyore_init();
 
     // gen body
     outasm("// funcdef - body");
@@ -113,9 +113,13 @@ void AstFuncUseParams::gen_eeyore() {
 }
 
 void AstBlock::gen_eeyore() {
-    for(auto *sub: body) // Decl, Stmt
-        if(istype(sub, AstStmt)) // Decl is handled in CompUnit or FuncDef
+    for(auto *sub: body) {// Decl, Stmt
+        if(istype(sub, AstStmt))
             ((AstStmt*)sub)->gen_eeyore();
+        else { // Decl handled in funcdef
+            ((AstDecl*)sub)->gen_eeyore(false);
+        }
+    }
 }
 
 void AstStmtAssignment::gen_eeyore() {

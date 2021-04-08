@@ -84,7 +84,7 @@ struct AstDecl: Ast {
     
     void propagate_property();
     void propagate_defpos(DefPosition pos);
-    void gen_eeyore();
+    void gen_eeyore(bool incl_decl);
 };
 
 struct AstDefs: Ast {
@@ -253,7 +253,7 @@ struct AstStmtWhile: AstStmt {
     int ldone;
 
     AstStmtWhile(AstExp *cond, AstStmt *body): AstStmt(StmtWhile),
-        cond(cond), body(body) {}
+        cond(cond), body(body), ltest(-1), ldone(-1) {}
     void gen_eeyore() override;
 };
 
