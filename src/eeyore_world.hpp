@@ -4,35 +4,58 @@
 #include <string>
 using std::vector;
 using std::string;
+using std::pair;
+using std::make_pair;
 
 const int EEYORE_INST_BUFSIZE = 1024;
+
+#define outasm(...) do { \
+    sprintf(instbuf, __VA_ARGS__); \
+    push_instruction(instbuf); \
+} while(0)
 
 struct EEyoreWorld {
     int temp_var_top;
     int label_top;
-    vector<string> instructions;
+    vector<string> *instructions;
+    bool should_emit_temp_var;
 
-    EEyoreWorld(): temp_var_top(-1), label_top(-1) {}
+    EEyoreWorld(): temp_var_top(-1), label_top(-1), should_emit_temp_var(true) {
+        instructions = new vector<string>();
+    }
+    ~EEyoreWorld() {
+        delete instructions;
+    }
     void clear() {
         temp_var_top = -1;
         label_top = -1;
-        instructions.clear();
+        should_emit_temp_var = true;
+        instructions->clear();
     }
     void push_instruction(char *buf) {
-        instructions.push_back(string(buf));
+        instructions->push_back(buf);
     }
     int gen_label() {
         return ++label_top;
     }
     int gen_temp_var() {
-        return ++temp_var_top;
+        static char instbuf[EEYORE_INST_BUFSIZE];
+
+        int tvar = ++temp_var_top;
+
+        if(should_emit_temp_var)
+            outasm("var t%d // tempvar", tvar);
+
+        return tvar;
     }
     void print() {
         printf("///// BEGIN EEYORE\n");
-        for(const auto& inst: instructions)
+        for(const auto& inst: *instructions)
             printf("%s\n", inst.c_str());
         printf("///// END EEYORE\n");
     }
 };
 
 extern EEyoreWorld eeyore_world;
+
+#undef outasm

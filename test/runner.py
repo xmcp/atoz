@@ -1,15 +1,15 @@
 import subprocess
 
-FAILFAST = False
+FAILFAST = True
 
-def run_cmd(cmdline, timeout_sec): # errno, stdout, stderr
+def run_cmd(cmdline, timeout_sec, inp): # errno, stdout, stderr
     p = subprocess.Popen(
         cmdline,
         shell=True,
         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
     try:
-        pout, perr = p.communicate(timeout=timeout_sec)
+        pout, perr = p.communicate(inp.encode(), timeout=timeout_sec)
         errcode = p.wait()
     except subprocess.TimeoutExpired:
         p.kill()
@@ -18,8 +18,8 @@ def run_cmd(cmdline, timeout_sec): # errno, stdout, stderr
 
     return errcode, pout.decode('utf-8', 'replace'), perr.decode('utf-8', 'replace')
 
-def run_cmd_willsucc(cmdline, timeout_sec=10):
-    errno, stdout, stderr = run_cmd(cmdline, timeout_sec)
+def run_cmd_willsucc(cmdline, timeout_sec=10, stdin=''):
+    errno, stdout, stderr = run_cmd(cmdline, timeout_sec, stdin)
 
     if errno:
         if FAILFAST:

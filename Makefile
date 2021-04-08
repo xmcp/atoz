@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := compiler
 
-CXX_OPTIONS = -lm -std=c++11
+CXX_OPTIONS = -g -lm -std=c++11
 
 sysy.tab:
 	yacc -d -v -o build/sysy.tab.cpp src/sysy.y

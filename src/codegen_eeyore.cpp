@@ -1,10 +1,14 @@
 #include <cstdio>
+#include <string>
+#include <vector>
 using std::sprintf;
+using std::string;
+using std::vector;
 
 #include "ast.hpp"
 #include "eeyore_world.hpp"
 
-#define istype(ptr,cls) (dynamic_cast<cls*>(ptr)!=nullptr)
+#define istype(ptr, cls) (dynamic_cast<cls*>(ptr)!=nullptr)
 
 #define outasm(...) do { \
     sprintf(instbuf, __VA_ARGS__); \
@@ -56,13 +60,40 @@ void AstDef::gen_eeyore_init() {
 void AstFuncDef::gen_eeyore() {
     outasm("f_%s [%d] // funcdef - begin", name.c_str(), (int)params->val.size());
 
+    // mark begin pos
+    vector<string> *old_instqueue = eeyore_world.instructions;
+    int old_tempvartop = eeyore_world.temp_var_top;
+
+    // virtualize instqueue for inner temp vars
+    eeyore_world.instructions = new vector<string>();
+    if(!eeyore_world.should_emit_temp_var)
+        generror("nested funcdef: %s", name.c_str());
+    eeyore_world.should_emit_temp_var = false;
+
+    // gen decl and init for body
     for(auto *def: defs_inside)
         def->gen_eeyore_decl();
     for(auto *def: defs_inside)
         def->gen_eeyore_init();
 
+    // gen body
+    outasm("// funcdef - body");
     body->gen_eeyore();
+
     outasm("end f_%s // funcdef - end", name.c_str());
+
+    // undo virtualization
+    vector<string> *new_instqueue = eeyore_world.instructions;
+    eeyore_world.instructions = old_instqueue;
+    eeyore_world.should_emit_temp_var = true;
+
+    // gen tempvar decl
+    for(int i=old_tempvartop+1; i<=eeyore_world.temp_var_top; i++)
+        outasm("var t%d // tempvar in func body", i);
+    
+    // put func body into instqueue
+    for(const auto &inst: *new_instqueue)
+        eeyore_world.instructions->push_back(inst);
 }
 
 void AstFuncUseParams::gen_eeyore() {

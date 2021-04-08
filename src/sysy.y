@@ -3,7 +3,7 @@
 #include <cstdlib>
 
 #include "enum_defs.hpp"
-#include "ast_defs.hpp"
+#include "ast.hpp"
 
 extern int yylex();
 int yyerror(const char*);
@@ -182,7 +182,7 @@ FuncDefParam: KW_INT IDENT {
     $$ = new AstDef($2, new AstMaybeIdx(), nullptr);
 };
 FuncDefParam: KW_INT IDENT L_BRACKET R_BRACKET MaybeIdx {
-    $5->val.insert($5->val.begin(), nullptr);
+    $5->val.insert($5->val.begin(), new AstExpLiteral(1));
     $$ = new AstDef($2, $5, nullptr);
 };
 
@@ -194,7 +194,7 @@ BlockItems: /*empty*/ {
 };
 BlockItems: BlockItems Decl {
     $1->push_val($2);
-    $2->propagate_defpos(DefGlobal);
+    $2->propagate_defpos(DefLocal);
     $$ = $1;
 };
 BlockItems: BlockItems Stmt {
