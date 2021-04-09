@@ -55,7 +55,8 @@ ConstExpResult AstExpLVal::calc_const() {
     if(!def->is_const)
         return ConstExpResult::asError("lval not const");
 
-    def->initval.calc_if_needed(def->ast_initval_or_null);
+    // initval is initialized in tree completing phase
+    //def->initval.calc_if_needed(def->ast_initval_or_null);
     return def->initval.getvalue(idxinfo);
 }
 
