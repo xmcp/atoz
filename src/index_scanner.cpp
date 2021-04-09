@@ -114,7 +114,7 @@ ConstExpResult InitVal::getvalue(AstMaybeIdx *idxinfo) {
 
     res = exp->get_const();
     if(res.iserror)
-        ConstExpResult::asError("array value not const");
+        return ConstExpResult::asError("array value not const");
 
     return res.val;
 }
