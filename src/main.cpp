@@ -30,7 +30,7 @@ FILE *oj_in, *oj_out;
 void parse_oj_args(int argc, char **argv) {
     if(argc!=6)
         mainerror("argc count is %d", argc);
-    if(strcmp(argv[1], "-S") || strcmp(argv[2], "-e") || strcmp(argv[4], "-4"))
+    if(strcmp(argv[1], "-S") || strcmp(argv[2], "-e") || strcmp(argv[4], "-o"))
         mainerror("argv error");
     
     oj_in = fopen(argv[3], "r");
@@ -38,7 +38,7 @@ void parse_oj_args(int argc, char **argv) {
 }
 
 int main(int argc, char **argv) {
-    /**/
+    /**
     // LOCAL TEST
     
     FILE *f = openyyfile(argv[1]);
