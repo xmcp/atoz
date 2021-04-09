@@ -14,6 +14,7 @@ extern int atoz_yycol;
 
 ///// FORWARD DECL
 
+struct Ast;
 struct AstDefs;
 struct AstDef;
 struct AstMaybeIdx;
@@ -31,12 +32,21 @@ struct NodeLocation {
     NodeLocation(): lineno(yylineno), colno(atoz_yycol)  {}
 };
 
+static vector<Ast*> allocated_ptrs;
+
 struct Ast {
     NodeLocation loc;
+
     Ast(): loc() {
+        allocated_ptrs.push_back(this);
     }
     // https://stackoverflow.com/questions/15114093/getting-source-type-is-not-polymorphic-when-trying-to-use-dynamic-cast
     virtual ~Ast() = default;
+
+    static void delete_all() {
+        for(auto ptr: allocated_ptrs)
+            delete ptr;
+    }
 };
 
 struct ConstExpResult {

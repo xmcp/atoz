@@ -74,8 +74,6 @@ extern Ast *ast_root;
 
 %%
 
- // todo: delete[] ident_str
-
  ///// LANGUAGE CONSTRUCTS
 
 Root: CompUnit {
@@ -119,9 +117,11 @@ Defs: Defs COMMA Def {
 
 Def: IDENT MaybeIdx ASSIGN InitVal {
     $$ = new AstDef($1, $2, $4);
+    delete[] $1;
 };
 Def: IDENT MaybeIdx {
     $$ = new AstDef($1, $2, nullptr);
+    delete[] $1;
 };
 
 MaybeIdx: /*empty*/ {
@@ -157,9 +157,11 @@ ManyInitVal: ManyInitVal COMMA InitVal {
 
 FuncDef: KW_VOID IDENT L_PAREN ZeroOrManyFuncDefParam R_PAREN Block {
     $$ = new AstFuncDef(FuncVoid, $2, $4, $6);
+    delete[] $2;
 };
 FuncDef: KW_INT IDENT L_PAREN ZeroOrManyFuncDefParam R_PAREN Block {
     $$ = new AstFuncDef(FuncInt, $2, $4, $6);
+    delete[] $2;
 };
 
 ZeroOrManyFuncDefParam: /*empty*/ {
@@ -180,10 +182,12 @@ ManyFuncDefParam: ManyFuncDefParam COMMA FuncDefParam {
 
 FuncDefParam: KW_INT IDENT {
     $$ = new AstDef($2, new AstMaybeIdx(), nullptr);
+    delete[] $2;
 };
 FuncDefParam: KW_INT IDENT L_BRACKET R_BRACKET MaybeIdx {
     $5->val.insert($5->val.begin(), new AstExpLiteral(1));
     $$ = new AstDef($2, $5, nullptr);
+    delete[] $2;
 };
 
 Block: L_BRACE BlockItems R_BRACE {
@@ -250,6 +254,7 @@ Cond: LOrExp {
 
 LVal: IDENT MaybeIdx {
     $$ = new AstExpLVal($1, $2);
+    delete[] $1;
 };
 
 PrimaryExp: L_PAREN Exp R_PAREN {
@@ -267,6 +272,7 @@ UnaryExp: PrimaryExp {
 };
 UnaryExp: IDENT L_PAREN ZeroOrManyFuncUseParam R_PAREN {
     $$ = new AstExpFunctionCall($1, $3);
+    delete[] $1;
 };
 UnaryExp: OPTYPE_ADD UnaryExp {
     $$ = new AstExpOpUnary(cvt_to_unary($1), $2);

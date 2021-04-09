@@ -28,6 +28,6 @@ def run_cmd_willsucc(cmdline, timeout_sec=10, stdin=''):
             print('STDERR: {\n%s\n}'%stderr)
             print('STDOUT: {\n%s\n}'%stdout)
             1/0
-        return f'(errno is {errno})'
+        return f'{stdout}\n===\n{stderr}\n===\n(errno is {errno})'
 
     return stdout

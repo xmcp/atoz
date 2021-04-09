@@ -4,18 +4,23 @@ from tqdm import tqdm
 
 run_cmd_willsucc('make clean')
 print('making compiler')
-run_cmd_willsucc('make', 40)
+out = run_cmd_willsucc('make', 60)
+print('MAKE OUTPUT: <<%s>>'%out)
 
-for p in tqdm(sorted(list(pathlib.Path('.').glob('testcases/**/per*/*.sy')))):
+eeyore_path = pathlib.Path('test/out.S')
+
+for p in tqdm(sorted(list(pathlib.Path('.').glob('testcases/**/func*/*.sy')))):
+    if eeyore_path.exists():
+        eeyore_path.unlink()
+
     print('trying', p)
-    out = run_cmd_willsucc(f'build/compiler {p}')
+    out = run_cmd_willsucc(f'ASAN_OPTIONS=detect_leaks=0 build/compiler -S -e {p} -o {eeyore_path}')
+    if out.strip():
+        print('COMPILER OUTPUT: <<%s>>'%out)
 
-    if not out.rstrip().endswith('TEST PASSED!'):
-        print('COMPILE ERROR', p)
-        print(out)
-        1/0
+    with eeyore_path.open() as f:
+        eeyore_code = f.read()
 
-    eeyore_code = out.partition('///// BEGIN EEYORE')[2].partition('///// END EEYORE')[0]
     basename = p.name.rpartition('.')[0]
 
     with open(p.with_name(basename+'.out')) as f:
@@ -25,10 +30,6 @@ for p in tqdm(sorted(list(pathlib.Path('.').glob('testcases/**/per*/*.sy')))):
             inp = f.read()
     else:
         inp = ''
-
-    eeyore_path = pathlib.Path('test/%s.eeyore'%basename)
-    with eeyore_path.open('w') as f:
-        f.write(eeyore_code)
 
     errno, out, stderr = run_cmd(f'test/MiniVM/build/minivm {eeyore_path}', 10, inp)
     out = (out.strip()+'\n'+str(errno)).lstrip()

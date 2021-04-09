@@ -57,6 +57,7 @@ int main(int argc, char **argv) {
 
     fclose(f);
     printf("TEST PASSED!\n");
+    Ast::delete_all();
 
     /*/
     // OJ
@@ -70,6 +71,7 @@ int main(int argc, char **argv) {
     eeyore_world.print(oj_out);
     fclose(oj_in);
     fclose(oj_out);
+    Ast::delete_all();
 
     //*/
 

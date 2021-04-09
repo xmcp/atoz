@@ -136,6 +136,8 @@ void AstFuncDef::gen_eeyore() {
     // put func body into instqueue
     for(const auto &inst: *new_instqueue)
         eeyore_world.instructions->push_back(inst);
+
+    delete new_instqueue;
 }
 
 void AstFuncUseParams::gen_eeyore() {
