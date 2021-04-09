@@ -95,7 +95,7 @@ return {return KW_RETURN;}
 
  /* whitespaces */
 
-[ \t] {}
+[ \t\r] {}
 \n {
     atoz_yycol = 0;
 }

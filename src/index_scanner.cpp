@@ -54,7 +54,7 @@ void InitVal::calc(AstInitVal *v) {
         if(calcpos > posbegin+calcstep*dimsize)
             scanerror("too many initializers for this dimension");
 
-        calcpos = posbegin+calcstep;
+        calcpos = posbegin+calcstep*dimsize;
         calcstep *= dimsize;
         calcdim--;
     }
