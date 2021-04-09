@@ -6,8 +6,8 @@ run_cmd_willsucc('make clean')
 print('making compiler')
 run_cmd_willsucc('make', 40)
 
-for p in tqdm(sorted(list(pathlib.Path('.').glob('testcases/**/*.sy')))):
-    #print('trying', p)
+for p in tqdm(sorted(list(pathlib.Path('.').glob('testcases/**/per*/*.sy')))):
+    print('trying', p)
     out = run_cmd_willsucc(f'build/compiler {p}')
 
     if not out.rstrip().endswith('TEST PASSED!'):
@@ -37,7 +37,7 @@ for p in tqdm(sorted(list(pathlib.Path('.').glob('testcases/**/*.sy')))):
         print('OUTPUT ERROR', p)
         print('OUT: {\n%s\n}'%out)
         print('STD: {\n%s\n}'%stdres)
-        1/0
+        #1/0
     
     eeyore_path.unlink()
         

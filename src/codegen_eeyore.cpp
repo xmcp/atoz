@@ -26,7 +26,10 @@ using std::vector;
 static char instbuf[EEYORE_INST_BUFSIZE];
 
 const char *ConstOrVar::eeyore_ref() {
-    static char buf[16];
+    static int _idx = 0;
+    static char bufs[16][16]; // multiple bufs because printf will eval all args before using the buf
+    _idx = (_idx+1)%16;
+    char *buf = &bufs[_idx][0];
     switch(type) {
         case Reference: sprintf(buf, "%c%d", cdef(val.reference), val.reference->index); break;
         case ConstExp: sprintf(buf, "%d", val.constexp); break;
@@ -254,7 +257,7 @@ ConstOrVar AstExpLVal::gen_eeyore() {
     if(!def->idxinfo->val.empty()) {
         AstExp *idx = def->initval.getoffset_bytes(idxinfo, false);
         ConstOrVar tidx = idx->gen_eeyore();
-        outasm("t%d = %c%d [%d] // lval - array", tval, cdef(def), def->index, tidx.eeyore_ref());
+        outasm("t%d = %c%d [%s] // lval - array", tval, cdef(def), def->index, tidx.eeyore_ref());
     } else {
 
         outasm("t%d = %c%d // lval - primitive", tval, cdef(def), def->index);
@@ -354,6 +357,6 @@ ConstOrVar AstExpOpBinary::gen_eeyore() {
     if(top2.type==ConstOrVar::TempVar && top2.val.tempvar<0)
         generror("binary operand2 not primitive");
 
-    outasm("t%d = t%d %s t%d", tret, top1, cvt_from_binary(op).c_str(), top2);
+    outasm("t%d = %s %s %s", tret, top1.eeyore_ref(), cvt_from_binary(op).c_str(), top2.eeyore_ref());
     return ConstOrVar::asTempVar(tret);
 }

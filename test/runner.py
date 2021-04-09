@@ -1,6 +1,6 @@
 import subprocess
 
-FAILFAST = True
+FAILFAST = False
 
 def run_cmd(cmdline, timeout_sec, inp): # errno, stdout, stderr
     p = subprocess.Popen(
@@ -13,6 +13,7 @@ def run_cmd(cmdline, timeout_sec, inp): # errno, stdout, stderr
         errcode = p.wait()
     except subprocess.TimeoutExpired:
         p.kill()
+        run_cmd('killall minivm', None, '') # sometimes minivm fails to stop
         pout, perr = p.communicate(timeout=timeout_sec)
         errcode = -1
 
