@@ -56,7 +56,7 @@ public:
         if(it==table.end()) {
             if(!parent) {
                 if(notfound_ok)
-                    return nullptr; // impossible
+                    return nullptr;
                 else
                     lookuperror("unknown symbol: %s", name.c_str());
             } else
@@ -323,7 +323,7 @@ public:
         proctype(AstExpOpUnary);
         proctype(AstExpOpBinary);
 
-        printf("!! ignored node\n");
+        typeerror("unknown node type\n");
     }
 
     void install_builtin_names(SymTable *tbl) {

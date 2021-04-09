@@ -38,7 +38,7 @@ for p in tqdm(sorted(list(pathlib.Path('.').glob('testcases/**/func*/*.sy')))):
         print('OUTPUT ERROR', p)
         print('OUT: {\n%s\n}'%out)
         print('STD: {\n%s\n}'%stdres)
-        #1/0
+        1/0
     
     eeyore_path.unlink()
         

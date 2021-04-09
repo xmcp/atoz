@@ -83,9 +83,9 @@ AstExp *InitVal::getoffset_bytes(AstMaybeIdx *idxinfo, bool allowpartial) {
         step /= shape[dim];
         // idx = idx + step * exp
         AstExp *next = step==1 ? exp : strip_location(new AstExpOpBinary(
-                OpMul,
-                strip_location(new AstExpLiteral(step)),
-                exp
+            OpMul,
+            strip_location(new AstExpLiteral(step)),
+            exp
         ));
         idx = idx->get_const().isalways(0) ? next : strip_location(new AstExpOpBinary(OpPlus, idx, next));
         dim++;

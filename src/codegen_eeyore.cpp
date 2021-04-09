@@ -258,17 +258,16 @@ ConstOrVar AstExpLVal::gen_eeyore() {
         return ConstOrVar::asConstExp(get_const().val);
     }
 
-    int tval = eeyore_world.gen_temp_var();
-
-    if(!def->idxinfo->val.empty()) {
+    if(!def->idxinfo->val.empty()) { // array
         AstExp *idx = def->initval.getoffset_bytes(idxinfo, false);
         ConstOrVar tidx = idx->gen_eeyore();
-        outasm("t%d = %c%d [%s] // lval - array", tval, cdef(def), def->index, tidx.eeyore_ref());
-    } else {
 
-        outasm("t%d = %c%d // lval - primitive", tval, cdef(def), def->index);
+        int tval = eeyore_world.gen_temp_var();
+        outasm("t%d = %c%d [%s] // lval - array", tval, cdef(def), def->index, tidx.eeyore_ref());
+        return ConstOrVar::asTempVar(tval);
+    } else { //primitive
+        return ConstOrVar::asReference(def);
     }
-    return ConstOrVar::asTempVar(tval);
 }
 
 ConstOrVar AstExpLiteral::gen_eeyore() {
