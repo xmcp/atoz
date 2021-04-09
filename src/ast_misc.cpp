@@ -1,6 +1,7 @@
-#include "ast.hpp"
-#include "tree_completing.cpp"
 #include <cassert>
+
+#include "ast.hpp"
+#include "tree_completing.hpp"
 
 #define istype(ptr,cls) (dynamic_cast<cls*>(ptr)!=nullptr)
 

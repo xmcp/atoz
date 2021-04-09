@@ -340,7 +340,7 @@ LOrExp: LOrExp OP_OR LAndExp {
 
 %%
 
-int yyerror(const char *msg) {
+void yyerror(const char *msg) {
     fprintf(stderr, "yyerror: %s at line %d col %d\n", msg, yylineno, atoz_yycol);
     exit(1);
 }

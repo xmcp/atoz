@@ -2,10 +2,11 @@
 #include <cstring>
 using namespace std;
 
-#include "test_lexer.cpp"
 #include "eeyore_world.hpp"
+#include "ast.hpp"
 
 extern int yyparse();
+extern void yyrestart(FILE*);
 
 #define mainerror(...) do { \
     printf("main error: "); \
@@ -30,7 +31,7 @@ FILE *oj_in, *oj_out;
 void parse_oj_args(int argc, char **argv) {
     if(argc!=6)
         mainerror("argc count is %d", argc);
-    if(strcmp(argv[1], "-S") || strcmp(argv[2], "-e") || strcmp(argv[4], "-o"))
+    if(strcmp(argv[1], "-S")!=0 || strcmp(argv[2], "-e")!=0 || strcmp(argv[4], "-o")!=0)
         mainerror("argv error");
     
     oj_in = fopen(argv[3], "r");

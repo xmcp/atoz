@@ -1,5 +1,8 @@
 #pragma once
 
+#include <vector>
+using std::vector;
+
 struct ConstExpResult;
 struct AstInitVal;
 struct AstMaybeIdx;

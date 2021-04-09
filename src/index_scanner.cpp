@@ -1,8 +1,8 @@
 #include <cstring>
 using std::memset;
 
-#include "ast.hpp"
 #include "index_scanner.hpp"
+#include "ast.hpp"
 
 #define scanerror(...) do { \
     printf("index scan error: "); \
@@ -11,7 +11,7 @@ using std::memset;
 } while(0)
 
 InitVal::InitVal():
-    value(nullptr), totelems(0), calcstep(1), calcdim(0), calcpos(0), calculated(false) {}
+    value(nullptr), totelems(0), calcstep(1), calcdim(0), calcpos(0), calculated(false), shape({}) {}
 
 void InitVal::init(AstMaybeIdx *shapeinfo) {
     for(auto exp: shapeinfo->val) {
