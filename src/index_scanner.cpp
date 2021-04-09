@@ -102,7 +102,7 @@ ConstExpResult InitVal::getvalue(AstMaybeIdx *idxinfo) {
 
     ConstExpResult res = offset->get_const();
     if(res.iserror)
-        ConstExpResult::asError("index not const");
+        return ConstExpResult::asError("index not const");
 
     int idx = res.val;
     if(idx%4)
