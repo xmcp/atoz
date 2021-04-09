@@ -5,3 +5,5 @@ __pycache__/
 /.idea/
 /cmake-*
 CMakeLists.txt
+/test/out.S
+/test/src.c

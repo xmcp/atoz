@@ -118,6 +118,10 @@ void AstFuncDef::gen_eeyore() {
     outasm("// funcdef - body");
     body->gen_eeyore();
 
+    if(type==FuncInt)
+        outasm("return 0 // funcdef - end");
+    else
+        outasm("return // funcdef - end");
     outasm("end f_%s // funcdef - end", name.c_str());
 
     // undo virtualization
