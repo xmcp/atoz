@@ -97,12 +97,12 @@ AstExp *InitVal::getoffset_bytes(AstMaybeIdx *idxinfo, bool allowpartial) {
     ));
 }
 
-int InitVal::getvalue(AstMaybeIdx *idxinfo) {
+ConstExpResult InitVal::getvalue(AstMaybeIdx *idxinfo) {
     AstExp *offset = getoffset_bytes(idxinfo, false);
 
     ConstExpResult res = offset->get_const();
     if(res.iserror)
-        scanerror("index not const: %s", res.error.c_str());
+        ConstExpResult::asError("index not const");
 
     int idx = res.val;
     if(idx%4)
@@ -114,7 +114,7 @@ int InitVal::getvalue(AstMaybeIdx *idxinfo) {
 
     res = exp->get_const();
     if(res.iserror)
-        scanerror("array value at %d not const: %s", idx, res.error.c_str());
+        ConstExpResult::asError("array value not const");
 
     return res.val;
 }

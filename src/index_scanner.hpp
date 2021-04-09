@@ -1,5 +1,6 @@
 #pragma once
 
+struct ConstExpResult;
 struct AstInitVal;
 struct AstMaybeIdx;
 struct AstExp;
@@ -29,5 +30,5 @@ public:
         }
     }
     AstExp *getoffset_bytes(AstMaybeIdx *idxinfo, bool allowpartial);
-    int getvalue(AstMaybeIdx *idxinfo);
+    ConstExpResult getvalue(AstMaybeIdx *idxinfo);
 };
