@@ -115,7 +115,7 @@ public:
             AstFuncDef *func = (AstFuncDef*)tbl->special.get("FuncDef");
             if(!func)
                 lookuperror("local var not in funcdef scope: %s", node->name.c_str());
-            func->defs_inside.push_back(node);
+            //func->defs_inside.push_back(node);
         }
 
     }

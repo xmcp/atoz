@@ -67,7 +67,7 @@ T *strip_location(T *node) {
     return node;
 }
 
-AstExp *InitVal::getoffset_bytes(AstMaybeIdx *idxinfo, bool allowpartial) {
+AstExp *InitVal::get_scalar_index(AstMaybeIdx *idxinfo, bool allowpartial) {
     if(allowpartial) {
         if(idxinfo->val.size()>shape.size())
             scanerror("offset shape too deep: item depth %d, offset %d", (int)shape.size(), (int)idxinfo->val.size());
@@ -90,25 +90,27 @@ AstExp *InitVal::getoffset_bytes(AstMaybeIdx *idxinfo, bool allowpartial) {
         idx = idx->get_const().isalways(0) ? next : strip_location(new AstExpOpBinary(OpPlus, idx, next));
         dim++;
     }
+    return idx;
+}
+
+AstExp *InitVal::get_offset_bytes(AstMaybeIdx *idxinfo, bool allowpartial) {
     return strip_location(new AstExpOpBinary(
         OpMul,
         strip_location(new AstExpLiteral(4)),
-        idx
+        get_scalar_index(idxinfo, allowpartial)
     ));
 }
 
-ConstExpResult InitVal::getvalue(AstMaybeIdx *idxinfo) {
-    AstExp *offset = getoffset_bytes(idxinfo, false);
+ConstExpResult InitVal::get_value(AstMaybeIdx *idxinfo) {
+    AstExp *offset = get_scalar_index(idxinfo, false);
 
     ConstExpResult res = offset->get_const();
     if(res.iserror)
         return ConstExpResult::asError("index not const");
 
     int idx = res.val;
-    if(idx%4)
-        scanerror("index not aligned: got %d", idx);
 
-    AstExp *exp = value[idx/4];
+    AstExp *exp = value[idx];
     if(!exp) // not initialized
         return 0;
 

@@ -57,7 +57,7 @@ ConstExpResult AstExpLVal::calc_const() {
 
     // initval is initialized in tree completing phase
     //def->initval.calc_if_needed(def->ast_initval_or_null);
-    return def->initval.getvalue(idxinfo);
+    return def->initval.get_value(idxinfo);
 }
 
 ConstExpResult AstExpLiteral::calc_const() {

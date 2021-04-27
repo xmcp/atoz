@@ -2,7 +2,6 @@
 #include <cstring>
 using namespace std;
 
-#include "eeyore_world.hpp"
 #include "ast.hpp"
 
 extern int yyparse();
@@ -53,7 +52,7 @@ int main(int argc, char **argv) {
     ast_root->complete_tree();
     printf("will gen eeyore\n");
     eeyore_world.clear();
-    ast_root->gen_eeyore();
+    ast_root->gen_ir();
     eeyore_world.print(stdout);
 
     fclose(f);
@@ -65,14 +64,23 @@ int main(int argc, char **argv) {
 
     parse_oj_args(argc, argv);
     yyrestart(oj_in);
+
     yyparse();
+
     ast_root->complete_tree();
-    eeyore_world.clear();
-    ast_root->gen_eeyore();
-    eeyore_world.print(oj_out);
+
+    auto *ir_root = new IrRoot();
+    ast_root->gen_ir(ir_root);
+
+    vector<string> eey_buf;
+    ir_root->output_eeyore(eey_buf);
+    for(const auto &s: eey_buf)
+        printf("%s\n", s.c_str());
+
     fclose(oj_in);
     fclose(oj_out);
     Ast::delete_all();
+    Ir::delete_all();
 
     //*/
 

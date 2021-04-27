@@ -7,6 +7,7 @@ using std::vector;
 using std::string;
 
 #include "enum_defs.hpp"
+#include "ir.hpp"
 #include "index_scanner.hpp"
 
 extern int yylineno;
@@ -32,19 +33,19 @@ struct NodeLocation {
     NodeLocation(): lineno(yylineno), colno(atoz_yycol)  {}
 };
 
-static vector<Ast*> allocated_ptrs;
+static vector<Ast*> allocated_ast_ptrs;
 
 struct Ast {
     NodeLocation loc;
 
     Ast(): loc() {
-        allocated_ptrs.push_back(this);
+        allocated_ast_ptrs.push_back(this);
     }
     // https://stackoverflow.com/questions/15114093/getting-source-type-is-not-polymorphic-when-trying-to-use-dynamic-cast
     virtual ~Ast() = default;
 
     static void delete_all() {
-        for(auto ptr: allocated_ptrs)
+        for(auto ptr: allocated_ast_ptrs)
             delete ptr;
     }
 };
@@ -73,38 +74,6 @@ public:
     }
 };
 
-struct ConstOrVar {
-    enum ConstOrVarType {
-        Reference, ConstExp, TempVar
-    } type;
-    union {
-        AstDef *reference;
-        int constexp;
-        int tempvar;
-    } val;
-
-private:
-    ConstOrVar(ConstOrVarType type): type(type), val({}) {}
-
-public:
-    const char *eeyore_ref();
-    static ConstOrVar asReference(AstDef* ref) {
-        ConstOrVar ret(Reference);
-        ret.val.reference = ref;
-        return ret;
-    }
-    static ConstOrVar asConstExp(int val) {
-        ConstOrVar ret(ConstExp);
-        ret.val.constexp = val;
-        return ret;
-    }
-    static ConstOrVar asTempVar(int tidx) {
-        ConstOrVar ret(TempVar);
-        ret.val.tempvar = tidx;
-        return ret;
-    }
-};
-
 ///// LANGUAGE CONSTRUCTS
 
 struct AstCompUnit: Ast {
@@ -114,7 +83,7 @@ struct AstCompUnit: Ast {
     void push_val(Ast *next);
 
     void complete_tree();
-    void gen_eeyore();
+    void gen_ir(IrRoot *root);
 };
 
 struct AstDecl: Ast {
@@ -129,7 +98,8 @@ struct AstDecl: Ast {
     
     void propagate_property();
     void propagate_defpos(DefPosition pos);
-    void gen_eeyore(bool is_global);
+    void gen_ir_local(IrFuncDef *func);
+    void gen_ir_global(IrRoot *root);
 };
 
 struct AstDefs: Ast {
@@ -159,8 +129,9 @@ struct AstDef: Ast {
             name(var_name), idxinfo(idxinfo), ast_initval_or_null(ast_initval), initval(),
             type(VarInt), is_const(false), pos(DefUnknown), index(-1) {}
     void calc_initval();
-    void gen_eeyore_decl();
-    void gen_eeyore_init(bool is_global);
+    void gen_ir_decl(IrDeclContainer *cont);
+    void gen_ir_init_local(IrFuncDef *func);
+    void gen_ir_init_global(IrRoot *root);
 };
 
 struct AstMaybeIdx: Ast {
@@ -196,11 +167,11 @@ struct AstFuncDef: Ast {
     AstBlock *body;
 
     // in tree completing phase
-    vector<AstDef*> defs_inside;
+    //vector<AstDef*> defs_inside;
 
     AstFuncDef(FuncType type, string func_name, AstFuncDefParams *params, AstBlock *body):
         type(type), name(func_name), params(params), body(body) {}
-    void gen_eeyore();
+    void gen_ir(IrRoot *root);
 };
 
 struct AstFuncDefParams: Ast {
@@ -220,7 +191,7 @@ struct AstFuncUseParams: Ast {
     void push_val(AstExp *next) {
         val.push_back(next);
     }
-    void gen_eeyore();
+    void gen_ir(IrFuncDef *func);
 };
 
 struct AstBlock: Ast {
@@ -228,7 +199,7 @@ struct AstBlock: Ast {
 
     AstBlock() {}
     void push_val(Ast *next);
-    void gen_eeyore();
+    void gen_ir(IrFuncDef *func);
 };
 
 ///// STATEMENT
@@ -237,7 +208,7 @@ struct AstStmt: Ast {
     StmtKinds kind;
     
     AstStmt(StmtKinds kind): kind(kind) {}
-    virtual void gen_eeyore() = 0;
+    virtual void gen_ir(IrFuncDef *func) = 0;
 };
 
 struct AstStmtAssignment: AstStmt {
@@ -246,7 +217,7 @@ struct AstStmtAssignment: AstStmt {
 
     AstStmtAssignment(AstExpLVal *lval, AstExp *rval): AstStmt(StmtAssignment),
         lval(lval), rval(rval) {}
-    void gen_eeyore() override;
+    void gen_ir(IrFuncDef *func) override;
 };
 
 struct AstStmtExp: AstStmt {
@@ -254,12 +225,12 @@ struct AstStmtExp: AstStmt {
 
     AstStmtExp(AstExp *exp): AstStmt(StmtExp),
         exp(exp) {}
-    void gen_eeyore() override;
+    void gen_ir(IrFuncDef *func) override;
 };
 
 struct AstStmtVoid: AstStmt {
     AstStmtVoid(): AstStmt(StmtVoid) {}
-    void gen_eeyore() override;
+    void gen_ir(IrFuncDef *func) override;
 };
 
 struct AstStmtBlock: AstStmt {
@@ -267,7 +238,7 @@ struct AstStmtBlock: AstStmt {
 
     AstStmtBlock(AstBlock *block): AstStmt(StmtBlock),
         block(block) {}
-    void gen_eeyore() override;
+    void gen_ir(IrFuncDef *func) override;
 };
 
 struct AstStmtIfOnly: AstStmt {
@@ -276,7 +247,7 @@ struct AstStmtIfOnly: AstStmt {
 
     AstStmtIfOnly(AstExp *cond, AstStmt *body): AstStmt(StmtIfOnly),
         cond(cond), body(body) {}
-    void gen_eeyore() override;
+    void gen_ir(IrFuncDef *func) override;
 };
 
 struct AstStmtIfElse: AstStmt {
@@ -286,20 +257,20 @@ struct AstStmtIfElse: AstStmt {
 
     AstStmtIfElse(AstExp *cond, AstStmt *body_true, AstStmt *body_false): AstStmt(StmtIfElse),
         cond(cond), body_true(body_true), body_false(body_false) {}
-    void gen_eeyore() override;
+    void gen_ir(IrFuncDef *func) override;
 };
 
 struct AstStmtWhile: AstStmt {
     AstExp *cond;
     AstStmt *body;
 
-    // in gen eeyore phase
+    // in gen ir phase, used in child break/continues
     int ltest;
     int ldone;
 
     AstStmtWhile(AstExp *cond, AstStmt *body): AstStmt(StmtWhile),
         cond(cond), body(body), ltest(-1), ldone(-1) {}
-    void gen_eeyore() override;
+    void gen_ir(IrFuncDef *func) override;
 };
 
 struct AstStmtBreak: AstStmt {
@@ -307,7 +278,7 @@ struct AstStmtBreak: AstStmt {
     AstStmtWhile *loop;
 
     AstStmtBreak(): AstStmt(StmtBreak), loop(nullptr) {}
-    void gen_eeyore() override;
+    void gen_ir(IrFuncDef *func) override;
 };
 
 struct AstStmtContinue: AstStmt {
@@ -315,12 +286,12 @@ struct AstStmtContinue: AstStmt {
     AstStmtWhile *loop;
 
     AstStmtContinue(): AstStmt(StmtContinue), loop(nullptr) {}
-    void gen_eeyore() override;
+    void gen_ir(IrFuncDef *func) override;
 };
 
 struct AstStmtReturnVoid: AstStmt {
     AstStmtReturnVoid(): AstStmt(StmtReturnVoid) {}
-    void gen_eeyore() override;
+    void gen_ir(IrFuncDef *func) override;
 };
 
 struct AstStmtReturn: AstStmt {
@@ -328,7 +299,7 @@ struct AstStmtReturn: AstStmt {
 
     AstStmtReturn(AstExp *retval): AstStmt(StmtReturn),
         retval(retval) {}
-    void gen_eeyore() override;
+    void gen_ir(IrFuncDef *func) override;
 };
 
 ///// EXPRESSION
@@ -342,7 +313,7 @@ public:
     AstExp(): const_calculated(false), const_cache(0) {}
 
     virtual ConstExpResult calc_const() = 0;
-    virtual ConstOrVar gen_eeyore() = 0; // return tmp label
+    virtual RVal gen_rval(IrFuncDef *func) = 0; // return tmp label
     ConstExpResult get_const() {
         if(!const_calculated) {
             const_cache = calc_const();
@@ -364,7 +335,7 @@ struct AstExpLVal: AstExp {
         name(name), idxinfo(idxinfo),
         def(nullptr), dim_left(-1) {}
     ConstExpResult calc_const() override;
-    ConstOrVar gen_eeyore() override;
+    RVal gen_rval(IrFuncDef *func) override;
 };
 
 struct AstExpLiteral: AstExp {
@@ -372,7 +343,7 @@ struct AstExpLiteral: AstExp {
 
     AstExpLiteral(int val): val(val) {}
     ConstExpResult calc_const() override;
-    ConstOrVar gen_eeyore() override;
+    RVal gen_rval(IrFuncDef *func) override;
 };
 
 struct AstExpFunctionCall: AstExp {
@@ -386,7 +357,7 @@ struct AstExpFunctionCall: AstExp {
         name(name), params(params),
         def(nullptr) {}
     ConstExpResult calc_const() override;
-    ConstOrVar gen_eeyore() override;
+    RVal gen_rval(IrFuncDef *func) override;
 };
 
 struct AstExpOpUnary: AstExp {
@@ -396,7 +367,7 @@ struct AstExpOpUnary: AstExp {
     AstExpOpUnary(UnaryOpKinds op, AstExp *operand):
         op(op), operand(operand) {}
     ConstExpResult calc_const() override;
-    ConstOrVar gen_eeyore() override;
+    RVal gen_rval(IrFuncDef *func) override;
 };
 
 struct AstExpOpBinary: AstExp {
@@ -407,5 +378,5 @@ struct AstExpOpBinary: AstExp {
     AstExpOpBinary(BinaryOpKinds op, AstExp *operand1, AstExp *operand2):
         op(op), operand1(operand1), operand2(operand2) {}
     ConstExpResult calc_const() override;
-    ConstOrVar gen_eeyore() override;
+    RVal gen_rval(IrFuncDef *func) override;
 };

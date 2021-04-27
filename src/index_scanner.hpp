@@ -32,6 +32,7 @@ public:
             calculated = true;
         }
     }
-    AstExp *getoffset_bytes(AstMaybeIdx *idxinfo, bool allowpartial);
-    ConstExpResult getvalue(AstMaybeIdx *idxinfo);
+    AstExp *get_scalar_index(AstMaybeIdx *idxinfo, bool allowpartial);
+    AstExp *get_offset_bytes(AstMaybeIdx *idxinfo, bool allowpartial);
+    ConstExpResult get_value(AstMaybeIdx *idxinfo);
 };
