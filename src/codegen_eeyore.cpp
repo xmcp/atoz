@@ -67,6 +67,8 @@ void IrFuncDef::output_eeyore(vector<string> &buf) {
             outasm("// stmt: %s", stmt.second.c_str());
         stmt.first->output_eeyore(buf);
     }
+
+    outasm("end f_%s", name.c_str());
 }
 
 void IrRoot::output_eeyore(vector<string> &buf) {

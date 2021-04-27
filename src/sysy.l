@@ -100,6 +100,10 @@ return {return KW_RETURN;}
     atoz_yycol = 0;
 }
 
+. {
+    yyerror(yytext);
+}
+
 %%
 
 int yywrap() {

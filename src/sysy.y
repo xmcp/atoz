@@ -6,7 +6,7 @@
 #include "ast.hpp"
 
 extern int yylex();
-int yyerror(const char*);
+void yyerror(const char*);
 extern Ast *ast_root;
 
 %}
