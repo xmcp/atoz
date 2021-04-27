@@ -108,11 +108,11 @@ void IrMov::output_eeyore(vector<string> &buf) {
 }
 
 void IrArraySet::output_eeyore(vector<string> &buf) {
-    outasm("%s [%s] = %s", eey(dest), eey(didx), eey(src));
+    outasm("%s [%s] = %s", eey(dest), eey(doffset), eey(src));
 }
 
 void IrArrayGet::output_eeyore(vector<string> &buf) {
-    outasm("%s = %s [%s]", eey(dest), eey(src), eey(sidx));
+    outasm("%s = %s [%s]", eey(dest), eey(src), eey(soffset));
 }
 
 void IrCondGoto::output_eeyore(vector<string> &buf) {
