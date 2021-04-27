@@ -73,7 +73,7 @@ void AstDef::gen_ir_init_local(IrFuncDef *func) {
             if(initval.value[i] != nullptr) {
                 RVal trval = initval.value[i]->gen_rval(func);
                 //outasm("T%d [%d] = %s // init %s local #%d/%d", index, i*4, trval.eeyore_ref(), name.c_str(), i, initval.totelems);
-                func->push_stmt(new IrArraySet(this, RVal::asConstExp(i), trval), name);
+                func->push_stmt(new IrArraySet(this, RVal::asConstExp(i*4), trval), name);
             }
     }
 }
@@ -129,7 +129,7 @@ void AstStmtAssignment::gen_ir(IrFuncDef *func) {
         generror("assignment lval got dim %d for var %s", lval->dim_left, lval->name.c_str());
 
     if(!lval->idxinfo->val.empty()) { // has array index
-        AstExp *idx = lval->def->initval.get_scalar_index(lval->idxinfo, true);
+        AstExp *idx = lval->def->initval.get_offset_bytes(lval->idxinfo, true);
         RVal lidx = idx->gen_rval(func);
         //outasm("%c%d [%s] = %s // assign", cdef(lval->def), lval->def->index, tlidx.eeyore_ref(), trval.eeyore_ref());
         func->push_stmt(new IrArraySet(lval->def, lidx, val));
@@ -231,7 +231,7 @@ RVal AstExpLVal::gen_rval(IrFuncDef *func) {
     }
 
     if(!def->idxinfo->val.empty()) { // array
-        AstExp *idx = def->initval.get_scalar_index(idxinfo, false);
+        AstExp *idx = def->initval.get_offset_bytes(idxinfo, false);
         RVal tidx = idx->gen_rval(func);
 
         LVal tval = func->gen_scalar_tempvar();

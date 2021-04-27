@@ -220,11 +220,11 @@ struct IrMov: IrStmt {
 
 struct IrArraySet: IrStmt {
     LVal dest;
-    RVal didx;
+    RVal doffset;
     RVal src;
 
-    IrArraySet(LVal dest, RVal didx, RVal src):
-        dest(dest), didx(didx), src(src) {}
+    IrArraySet(LVal dest, RVal doffset, RVal src):
+        dest(dest), doffset(doffset), src(src) {}
 
     void output_eeyore(vector<string> &buf) override;
 };
@@ -232,10 +232,10 @@ struct IrArraySet: IrStmt {
 struct IrArrayGet: IrStmt {
     LVal dest;
     RVal src;
-    RVal sidx;
+    RVal soffset;
 
-    IrArrayGet(LVal dest, RVal src, RVal sidx):
-        dest(dest), src(src), sidx(sidx) {}
+    IrArrayGet(LVal dest, RVal src, RVal soffset):
+        dest(dest), src(src), soffset(soffset) {}
 
     void output_eeyore(vector<string> &buf) override;
 };
