@@ -37,6 +37,10 @@ string LVal::eeyore_ref() {
     buf.push_back(string(instbuf)); \
 } while(0)
 
+#define outstmt(...) do { \
+    outasm("    " __VA_ARGS__); \
+} while(0)
+
 #define outcomment(fmt, ...) do { \
     sprintf(instbuf, "%s // " fmt, buf.back().c_str(), __VA_ARGS__); \
     buf.pop_back(); \
@@ -80,77 +84,83 @@ void IrFuncDef::output_eeyore(vector<string> &buf) {
 void IrRoot::output_eeyore(vector<string> &buf) {
     outasm("// BEGIN EEYORE");
 
+    outasm("//--- GLOBAL DECL");
     for(auto decl: decls) {
         decl.first->output_eeyore(buf);
         if(EEYORE_GEN_COMMENTS && !decl.second.empty())
             outcomment("global: %s", decl.second.c_str());
     }
 
+    outasm("");
+    outasm("//--- GLOBAL INIT");
     for(auto init: inits) {
         init.first->output_eeyore(buf);
         if(EEYORE_GEN_COMMENTS && !init.second.empty())
             outcomment("init: %s", init.second.c_str());
     }
 
+    outasm("");
+    outasm("//--- FUNCTIONS");
     for(auto func: funcs) {
         func.first->output_eeyore(buf);
         if(EEYORE_GEN_COMMENTS && !func.second.empty())
             outcomment("func: %s", func.second.c_str());
+        outasm("");
     }
 
     outasm("// END EEYORE");
 }
 
 void IrOpBinary::output_eeyore(vector<string> &buf) {
-    outasm("%s = %s %s %s", eey(dest), eey(operand1), cvt_from_binary(op).c_str(), eey(operand2));
+    outstmt("%s = %s %s %s", eey(dest), eey(operand1), cvt_from_binary(op).c_str(), eey(operand2));
 }
 
 void IrOpUnary::output_eeyore(vector<string> &buf) {
-    outasm("%s = %s %s", eey(dest), cvt_from_unary(op).c_str(), eey(operand));
+    outstmt("%s = %s %s", eey(dest), cvt_from_unary(op).c_str(), eey(operand));
 }
 
 void IrMov::output_eeyore(vector<string> &buf) {
-    outasm("%s = %s", eey(dest), eey(src));
+    outstmt("%s = %s", eey(dest), eey(src));
 }
 
 void IrArraySet::output_eeyore(vector<string> &buf) {
-    outasm("%s [%s] = %s", eey(dest), eey(doffset), eey(src));
+    outstmt("%s [%s] = %s", eey(dest), eey(doffset), eey(src));
 }
 
 void IrArrayGet::output_eeyore(vector<string> &buf) {
-    outasm("%s = %s [%s]", eey(dest), eey(src), eey(soffset));
+    outstmt("%s = %s [%s]", eey(dest), eey(src), eey(soffset));
 }
 
 void IrCondGoto::output_eeyore(vector<string> &buf) {
-    outasm("if %s %s %s goto l%d", eey(operand1), cvt_from_binary(op).c_str(), eey(operand2), label);
+    outstmt("if %s %s %s goto l%d", eey(operand1), cvt_from_binary(op).c_str(), eey(operand2), label);
 }
 
 void IrGoto::output_eeyore(vector<string> &buf) {
-    outasm("goto l%d", label);
+    outstmt("goto l%d", label);
 }
 
 void IrLabel::output_eeyore(vector<string> &buf) {
-    outasm("l%d:", label);
+    outstmt("l%d:", label);
 }
 
 void IrParam::output_eeyore(vector<string> &buf) {
-    outasm("param %s", eey(param));
+    outstmt("param %s", eey(param));
 }
 
 void IrCallVoid::output_eeyore(vector<string> &buf) {
-    outasm("call f_%s", name.c_str());
+    outstmt("call f_%s", name.c_str());
 }
 
 void IrCall::output_eeyore(vector<string> &buf) {
-    outasm("%s = call f_%s", eey(ret), name.c_str());
+    outstmt("%s = call f_%s", eey(ret), name.c_str());
 }
 
 void IrReturnVoid::output_eeyore(vector<string> &buf) {
-    outasm("return");
+    outstmt("return");
 }
 
 void IrReturn::output_eeyore(vector<string> &buf) {
-    outasm("return %s", eey(retval));
+    outstmt("return %s", eey(retval));
 }
 
 #undef eey

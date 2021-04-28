@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := compiler
 
-CXX_OPTIONS = -g -lm -std=c++11
-#CXX_OPTIONS = -Wall -Wextra -Wno-reorder -Wno-unused -Ofast -lm -std=c++17 -fstack-protector-all -ftrapv -fsanitize=address -fsanitize=undefined
+CXX_OPTIONS = -g -lm -std=c++11 -Wno-reorder -Wno-format-zero-length -Wno-unused-function -Wno-return-type
+#CXX_OPTIONS = -lm -Wall -Wextra -Wno-reorder -Wno-format-zero-length -Wno-unused-function -Wno-return-type -Ofast -std=c++17 -fstack-protector-all -ftrapv -fsanitize=address -fsanitize=undefined
 
 sysy.tab:
 	yacc -d -o build/sysy.tab.cpp src/sysy.y
