@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 run_cmd_willsucc('make clean')
 print('making compiler')
-out = run_cmd_willsucc('make', 60)
+out = run_cmd_willsucc('make', 120)
 print('MAKE OUTPUT: <<%s>>'%out)
 
 eeyore_path = pathlib.Path('test/out.S')
