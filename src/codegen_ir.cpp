@@ -5,7 +5,7 @@
 #define istype(ptr, cls) (dynamic_cast<cls*>(ptr)!=nullptr)
 
 #define generror(...) do { \
-    printf("codegen eeyore error: "); \
+    printf("codegen ir error: "); \
     printf(__VA_ARGS__); \
     exit(1); \
 } while(0)

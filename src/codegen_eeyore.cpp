@@ -37,6 +37,12 @@ string LVal::eeyore_ref() {
     buf.push_back(string(instbuf)); \
 } while(0)
 
+#define outcomment(fmt, ...) do { \
+    sprintf(instbuf, "%s // " fmt, buf.back().c_str(), __VA_ARGS__); \
+    buf.pop_back(); \
+    buf.push_back(string(instbuf)); \
+} while(0)
+
 #define eey(v) ((v).eeyore_ref().c_str())
 
 void IrDecl::output_eeyore(vector<string> &buf) {
@@ -57,15 +63,15 @@ void IrFuncDef::output_eeyore(vector<string> &buf) {
     outasm("f_%s [%d]", name.c_str(), args);
 
     for(auto decl: decls) {
-        if(EEYORE_GEN_COMMENTS && !decl.second.empty())
-            outasm("// decl: %s", decl.second.c_str());
         decl.first->output_eeyore(buf);
+        if(EEYORE_GEN_COMMENTS && !decl.second.empty())
+            outcomment("local: %s", decl.second.c_str());
     }
 
     for(auto stmt: stmts) {
-        if(EEYORE_GEN_COMMENTS && !stmt.second.empty())
-            outasm("// stmt: %s", stmt.second.c_str());
         stmt.first->output_eeyore(buf);
+        if(EEYORE_GEN_COMMENTS && !stmt.second.empty())
+            outcomment("stmt: %s", stmt.second.c_str());
     }
 
     outasm("end f_%s", name.c_str());
@@ -75,21 +81,21 @@ void IrRoot::output_eeyore(vector<string> &buf) {
     outasm("// BEGIN EEYORE");
 
     for(auto decl: decls) {
-        if(EEYORE_GEN_COMMENTS && !decl.second.empty())
-            outasm("// decl: %s", decl.second.c_str());
         decl.first->output_eeyore(buf);
+        if(EEYORE_GEN_COMMENTS && !decl.second.empty())
+            outcomment("global: %s", decl.second.c_str());
     }
 
     for(auto init: inits) {
-        if(EEYORE_GEN_COMMENTS && !init.second.empty())
-            outasm("// init: %s", init.second.c_str());
         init.first->output_eeyore(buf);
+        if(EEYORE_GEN_COMMENTS && !init.second.empty())
+            outcomment("init: %s", init.second.c_str());
     }
 
     for(auto func: funcs) {
-        if(EEYORE_GEN_COMMENTS && !func.second.empty())
-            outasm("// func: %s", func.second.c_str());
         func.first->output_eeyore(buf);
+        if(EEYORE_GEN_COMMENTS && !func.second.empty())
+            outcomment("func: %s", func.second.c_str());
     }
 
     outasm("// END EEYORE");

@@ -74,6 +74,7 @@ int main(int argc, char **argv) {
 
     vector<string> eey_buf;
     ir_root->output_eeyore(eey_buf);
+
     for(const auto &s: eey_buf)
         fprintf(oj_out, "%s\n", s.c_str());
 
