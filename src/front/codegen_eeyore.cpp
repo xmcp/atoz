@@ -1,33 +1,71 @@
 #include <cstdio>
+#include <cassert>
+#include <sstream>
 using std::sprintf;
+using std::stringstream;
 
 #include "back/ir.hpp"
 #include "front/ast.hpp"
 
 const bool EEYORE_GEN_COMMENTS = true;
-
+const bool OUTPUT_REGALLOC_PREFIX = false;
+const bool OUTPUT_DEF_USE = true;
 const int EEYORE_INST_BUFSIZE = 512;
+
 static char instbuf[EEYORE_INST_BUFSIZE];
 
 #define cdef(def) ((def)->pos==DefArg ? 'p' : 'T')
 
-string RVal::eeyore_ref() {
+string RVal::eeyore_ref_local(IrFuncDef *func) {
+    string pfx;
     char buf[16];
+
+    if(OUTPUT_REGALLOC_PREFIX && type != ConstExp) {
+        auto it = func->vreg_map.find(reguid());
+        if(type==TempVar && val.tempvar==func->_eeyore_retval_var.val.tempvar)
+            pfx = "{retval}";
+        else if(it==func->vreg_map.end())
+            pfx = "{???}";
+        else
+            pfx = it->second.tigger_ref();
+    }
+
     switch(type) {
         case Reference: sprintf(buf, "%c%d", cdef(val.reference), val.reference->index); break;
         case ConstExp: sprintf(buf, "%d", val.constexp); break;
         case TempVar: sprintf(buf, "t%d", val.tempvar); break;
     }
-    return string(buf);
+    return pfx + string(buf);
 }
 
-string LVal::eeyore_ref() {
+
+string LVal::eeyore_ref_global() {
     char buf[16];
     switch(type) {
         case Reference: sprintf(buf, "%c%d", cdef(val.reference), val.reference->index); break;
         case TempVar: sprintf(buf, "t%d", val.tempvar); break;
     }
     return string(buf);
+}
+string LVal::eeyore_ref_local(IrFuncDef *func) {
+    string pfx;
+    char buf[16];
+
+    if(OUTPUT_REGALLOC_PREFIX) {
+        auto it = func->vreg_map.find(reguid());
+        if(type==TempVar && val.tempvar==func->_eeyore_retval_var.val.tempvar)
+            pfx = "{retval}";
+        else if(it==func->vreg_map.end())
+            pfx = "{???}";
+        else
+            pfx = it->second.tigger_ref();
+    }
+
+    switch(type) {
+        case Reference: sprintf(buf, "%c%d", cdef(val.reference), val.reference->index); break;
+        case TempVar: sprintf(buf, "t%d", val.tempvar); break;
+    }
+    return pfx + string(buf);
 }
 
 #undef cdef
@@ -47,35 +85,52 @@ string LVal::eeyore_ref() {
     buf.push_back(string(instbuf)); \
 } while(0)
 
-#define eey(v) ((v).eeyore_ref().c_str())
+#define eey(v) ((v).eeyore_ref_local(func).c_str())
 
 void IrDecl::output_eeyore(list<string> &buf) {
-    if(is_array)
-        outasm("var %d %s", size_bytes, eey(dest));
+    if(def_or_null!=nullptr && def_or_null->idxinfo->dims() > 0) // array var
+        outasm("var %d %s", def_or_null->initval.totelems, dest.eeyore_ref_global().c_str());
     else
-        outasm("var %s", eey(dest));
+        outasm("var %s", dest.eeyore_ref_global().c_str());
 }
 
 void IrInit::output_eeyore(list<string> &buf) {
-    if(is_array)
-        outasm("%s [%d] = %d", eey(dest), offset_bytes, val);
-    else
-        outasm("%s = %d", eey(dest), val);
+    if(def->idxinfo->dims()>0) { // array init
+        assert(offset_bytes>=0);
+        outasm("%s [%d] = %d", dest.eeyore_ref_global().c_str(), offset_bytes, val);
+    }
+    else { // scalar init
+        assert(offset_bytes==-1);
+        outasm("%s = %d", dest.eeyore_ref_global().c_str(), val);
+    }
 }
 
 void IrFuncDef::output_eeyore(list<string> &buf) {
     outasm("f_%s [%d]", name.c_str(), args);
 
-    for(auto decl: decls) {
+    for(const auto& decl: decls) {
         decl.first->output_eeyore(buf);
         if(EEYORE_GEN_COMMENTS && !decl.second.empty())
             outcomment("local: %s", decl.second.c_str());
     }
 
-    for(auto stmt: stmts) {
+    for(const auto& stmt: stmts) {
         stmt.first->output_eeyore(buf);
         if(EEYORE_GEN_COMMENTS && !stmt.second.empty())
             outcomment("stmt: %s", stmt.second.c_str());
+        if(OUTPUT_DEF_USE) {
+            stringstream ss;
+            ss << "DEF: ";
+            for(int def: stmt.first->defs())
+                ss << demystify_reguid(def) << ' ';
+            ss << "| USE: ";
+            for(int use: stmt.first->uses())
+                ss << demystify_reguid(use) << ' ';
+            ss << "| ALIVE: ";
+            for(int alive: stmt.first->_regalloc_alive_vars)
+                ss << demystify_reguid(alive) << ' ';
+            outcomment("%s", ss.str().c_str());
+        }
     }
 
     outasm("end f_%s", name.c_str());
@@ -85,7 +140,7 @@ void IrRoot::output_eeyore(list<string> &buf) {
     outasm("// BEGIN EEYORE");
 
     outasm("//--- GLOBAL DECL");
-    for(auto decl: decls) {
+    for(const auto& decl: decls) {
         decl.first->output_eeyore(buf);
         if(EEYORE_GEN_COMMENTS && !decl.second.empty())
             outcomment("global: %s", decl.second.c_str());
@@ -156,11 +211,20 @@ void IrCall::output_eeyore(list<string> &buf) {
 }
 
 void IrReturnVoid::output_eeyore(list<string> &buf) {
-    outstmt("return");
+    outstmt("goto l%d", func->return_label);
 }
 
 void IrReturn::output_eeyore(list<string> &buf) {
-    outstmt("return %s", eey(retval));
+    outstmt("%s = %s", eey(func->_eeyore_retval_var), eey(retval));
+    outstmt("goto l%d", func->return_label);
+}
+
+void IrLabelReturn::output_eeyore(list<string> &buf) {
+    outstmt("l%d:", func->return_label);
+    if(func->type==FuncVoid)
+        outstmt("return");
+    else
+        outstmt("return %s", eey(func->_eeyore_retval_var));
 }
 
 #undef eey

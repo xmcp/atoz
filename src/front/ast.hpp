@@ -141,6 +141,10 @@ struct AstMaybeIdx: Ast {
     void push_val(AstExp *next) {
         val.push_back(next);
     }
+
+    int dims() {
+        return val.size();
+    }
 };
 
 struct AstInitVal: Ast {

@@ -38,52 +38,41 @@ void parse_oj_args(int argc, char **argv) {
 }
 
 int main(int argc, char **argv) {
-    /**
-    // LOCAL TEST
-    
-    FILE *f = openyyfile(argv[1]);
-
-    //test_lexer();
-
-    ast_root = nullptr;
-
-    yyparse();
-    printf("parsed, will complete tree\n");
-    ast_root->complete_tree();
-    printf("will gen eeyore\n");
-    eeyore_world.clear();
-    ast_root->gen_ir();
-    eeyore_world.print(stdout);
-
-    fclose(f);
-    printf("TEST PASSED!\n");
-    Ast::delete_all();
-
-    /*/
-    // OJ
-
+    /// PREPARE
     parse_oj_args(argc, argv);
     yyrestart(oj_in);
 
+    /// PARSE
     yyparse();
 
+    /// COMPLETE TREE
     ast_root->complete_tree();
 
+    /// GEN IR
     auto *ir_root = new IrRoot();
     ast_root->gen_ir(ir_root);
 
+    /// GEN CFG, REG ALLOC
+    for(const auto& funcpair: ir_root->funcs) {
+        auto func = funcpair.first;
+
+        func->connect_all_cfg();
+        func->regalloc();
+    }
+
+    /// GEN EEYORE
     list<string> eey_buf;
     ir_root->output_eeyore(eey_buf);
 
+    /// OUTPUT
     for(const auto &s: eey_buf)
         fprintf(oj_out, "%s\n", s.c_str());
 
+    /// CLEANUP
     fclose(oj_in);
     fclose(oj_out);
     Ast::delete_all();
     Ir::delete_all();
-
-    //*/
 
     return 0;
 }

@@ -34,10 +34,7 @@ void AstDecl::gen_ir_local(IrFuncDef *func) {
 void AstDef::gen_ir_decl(IrDeclContainer *cont) {
     assert(pos!=DefArg); // funcdef->params is not walked in this phase
 
-    if(idxinfo->val.empty())
-        cont->push_decl(new IrDecl(this), name);
-    else
-        cont->push_decl(new IrDecl(this, initval.totelems), name);
+    cont->push_decl(new IrDecl(this), name);
 }
 
 void AstDef::gen_ir_init_global(IrRoot *root) {
@@ -65,32 +62,27 @@ void AstDef::gen_ir_init_local(IrFuncDef *func) {
     if(idxinfo->val.empty()) { // primitive
         if(initval.value[0] != nullptr) {
             RVal trval = initval.value[0]->gen_rval(func);
-            //outasm("T%d = %s // init %s local", index, trval.eeyore_ref(), name.c_str());
-            func->push_stmt(new IrMov(this, trval), name);
+            //outasm("T%d = %s // init %s local", index, trval.eeyore_ref_local(), name.c_str());
+            func->push_stmt(new IrMov(func, this, trval), name);
         }
     } else { // array
         for(int i=0; i<initval.totelems; i++)
             if(initval.value[i] != nullptr) {
                 RVal trval = initval.value[i]->gen_rval(func);
-                //outasm("T%d [%d] = %s // init %s local #%d/%d", index, i*4, trval.eeyore_ref(), name.c_str(), i, initval.totelems);
-                func->push_stmt(new IrArraySet(this, RVal::asConstExp(i*4), trval), name);
+                //outasm("T%d [%d] = %s // init %s local #%d/%d", index, i*4, trval.eeyore_ref_local(), name.c_str(), i, initval.totelems);
+                func->push_stmt(new IrArraySet(func, this, RVal::asConstExp(i*4), trval), name);
             }
     }
 }
 
 
 void AstFuncDef::gen_ir(IrRoot *root) {
-    auto *func = new IrFuncDef(root, name, (int)params->val.size());
+    auto *func = new IrFuncDef(root, type, name, (int)params->val.size());
     root->push_func(func);
 
     body->gen_ir(func);
 
-    if(type==FuncInt)
-        //outasm("return 0 // funcdef - end");
-        func->push_stmt(new IrReturn(RVal::asConstExp(0)), "func epilog");
-    else
-        //outasm("return // funcdef - end");
-        func->push_stmt(new IrReturnVoid(), "func epilog");
+    func->push_stmt(new IrLabelReturn(func, func->return_label), "func epilog");
 }
 
 void AstFuncUseParams::gen_ir(IrFuncDef *func) {
@@ -100,14 +92,14 @@ void AstFuncUseParams::gen_ir(IrFuncDef *func) {
             AstExp *idx = lval->def->initval.get_offset_bytes(lval->idxinfo, true);
             RVal tidx = idx->gen_rval(func);
             LVal trval = func->gen_scalar_tempvar();
-            //outasm("t%d = %c%d + %s // useparam - array access", trval, cdef(lval->def), lval->def->index, tidx.eeyore_ref());
-            func->push_stmt(new IrOpBinary(trval, lval->def, OpPlus, tidx), "param array access");
+            //outasm("t%d = %c%d + %s // useparam - array access", trval, cdef(lval->def_or_null), lval->def_or_null->index, tidx.eeyore_ref_local());
+            func->push_stmt(new IrOpBinary(func, trval, lval->def, OpPlus, tidx), "param array access");
             //outasm("param t%d // useparam - array pass", trval);
-            func->push_stmt(new IrParam(trval));
+            func->push_stmt(new IrParam(func, trval));
         } else { // pass primitive
             RVal trval = param->gen_rval(func);
-            //outasm("param %s // useparam - primitive", trval.eeyore_ref());
-            func->push_stmt(new IrParam(trval));
+            //outasm("param %s // useparam - primitive", trval.eeyore_ref_local());
+            func->push_stmt(new IrParam(func, trval));
         }
     }
 }
@@ -131,11 +123,11 @@ void AstStmtAssignment::gen_ir(IrFuncDef *func) {
     if(!lval->idxinfo->val.empty()) { // has array index
         AstExp *idx = lval->def->initval.get_offset_bytes(lval->idxinfo, true);
         RVal lidx = idx->gen_rval(func);
-        //outasm("%c%d [%s] = %s // assign", cdef(lval->def), lval->def->index, tlidx.eeyore_ref(), trval.eeyore_ref());
-        func->push_stmt(new IrArraySet(lval->def, lidx, val));
+        //outasm("%c%d [%s] = %s // assign", cdef(lval->def_or_null), lval->def_or_null->index, tlidx.eeyore_ref(), trval.eeyore_ref_local());
+        func->push_stmt(new IrArraySet(func, lval->def, lidx, val));
     } else { // plain value
-        //outasm("%c%d = %s // assign", cdef(lval->def), lval->def->index, trval.eeyore_ref());
-        func->push_stmt(new IrMov(lval->def, val));
+        //outasm("%c%d = %s // assign", cdef(lval->def_or_null), lval->def_or_null->index, trval.eeyore_ref_local());
+        func->push_stmt(new IrMov(func, lval->def, val));
     }
 }
 
@@ -155,32 +147,32 @@ void AstStmtIfOnly::gen_ir(IrFuncDef *func) {
     RVal tcond = cond->gen_rval(func);
 
     int lskip = func->gen_label();
-    //outasm("if %s == 0 goto l%d // ifonly", tcond.eeyore_ref(), lskip);
-    func->push_stmt(new IrCondGoto(tcond, OpEq, RVal::asConstExp(0), lskip), "ifonly");
+    //outasm("if %s == 0 goto l%d // ifonly", tcond.eeyore_ref_local(), lskip);
+    func->push_stmt(new IrCondGoto(func, tcond, OpEq, RVal::asConstExp(0), lskip), "ifonly");
 
     body->gen_ir(func);
     //outasm("l%d: // ifonly - lskip", lskip);
-    func->push_stmt(new IrLabel(lskip), "ifonly - lskip");
+    func->push_stmt(new IrLabel(func, lskip), "ifonly - lskip");
 }
 
 void AstStmtIfElse::gen_ir(IrFuncDef *func) {
     RVal tcond = cond->gen_rval(func);
 
     int lfalse = func->gen_label();
-    //outasm("if %s == 0 goto l%d // ifelse", tcond.eeyore_ref(), lfalse);
-    func->push_stmt(new IrCondGoto(tcond, OpEq, RVal::asConstExp(0), lfalse), "ifelse");
+    //outasm("if %s == 0 goto l%d // ifelse", tcond.eeyore_ref_local(), lfalse);
+    func->push_stmt(new IrCondGoto(func, tcond, OpEq, RVal::asConstExp(0), lfalse), "ifelse");
 
     body_true->gen_ir(func);
     int ldone = func->gen_label();
     //outasm("goto l%d // ifelse - truedone", ldone);
-    func->push_stmt(new IrGoto(ldone), "ifelse - true done");
+    func->push_stmt(new IrGoto(func, ldone), "ifelse - true done");
 
     //outasm("l%d: // ifelse - lfalse", lfalse);
-    func->push_stmt(new IrLabel(lfalse), "ifelse - lfalse");
+    func->push_stmt(new IrLabel(func, lfalse), "ifelse - lfalse");
     body_false->gen_ir(func);
 
     //outasm("l%d: // ifelse - ldone", ldone);
-    func->push_stmt(new IrLabel(ldone), "ifelse - ldone");
+    func->push_stmt(new IrLabel(func, ldone), "ifelse - ldone");
 }
 
 void AstStmtWhile::gen_ir(IrFuncDef *func) {
@@ -188,38 +180,38 @@ void AstStmtWhile::gen_ir(IrFuncDef *func) {
     ldone = func->gen_label();
 
     //outasm("l%d: // while - ltest", ltest);
-    func->push_stmt(new IrLabel(ltest), "while - ltest");
+    func->push_stmt(new IrLabel(func, ltest), "while - ltest");
 
     RVal tcond = cond->gen_rval(func);
-    //outasm("if %s == 0 goto l%d // while - done", tcond.eeyore_ref(), ldone);
-    func->push_stmt(new IrCondGoto(tcond, OpEq, RVal::asConstExp(0), ldone), "while - done");
+    //outasm("if %s == 0 goto l%d // while - done", tcond.eeyore_ref_local(), ldone);
+    func->push_stmt(new IrCondGoto(func, tcond, OpEq, RVal::asConstExp(0), ldone), "while - done");
 
     body->gen_ir(func);
     //outasm("goto l%d // while - totest", ltest);
-    func->push_stmt(new IrGoto(ltest), "while - to test");
+    func->push_stmt(new IrGoto(func, ltest), "while - to test");
     //outasm("l%d: // while - ldone", ldone);
-    func->push_stmt(new IrLabel(ldone), "while - ldone");
+    func->push_stmt(new IrLabel(func, ldone), "while - ldone");
 }
 
 void AstStmtBreak::gen_ir(IrFuncDef *func) {
     //outasm("goto l%d // break", loop->ldone);
-    func->push_stmt(new IrGoto(loop->ldone), "break");
+    func->push_stmt(new IrGoto(func, loop->ldone), "break");
 }
 
 void AstStmtContinue::gen_ir(IrFuncDef *func) {
     //outasm("goto l%d // continue", loop->ltest);
-    func->push_stmt(new IrGoto(loop->ltest), "continue");
+    func->push_stmt(new IrGoto(func, loop->ltest), "continue");
 }
 
 void AstStmtReturnVoid::gen_ir(IrFuncDef *func) {
     //outasm("return");
-    func->push_stmt(new IrReturnVoid());
+    func->push_stmt(new IrReturnVoid(func));
 }
 
 void AstStmtReturn::gen_ir(IrFuncDef *func) {
     RVal tret = retval->gen_rval(func);
-    //outasm("return %s // return", tret.eeyore_ref());
-    func->push_stmt(new IrReturn(tret));
+    //outasm("return %s // return", tret.eeyore_ref_local());
+    func->push_stmt(new IrReturn(func, tret));
 }
 
 RVal AstExpLVal::gen_rval(IrFuncDef *func) {
@@ -235,8 +227,8 @@ RVal AstExpLVal::gen_rval(IrFuncDef *func) {
         RVal tidx = idx->gen_rval(func);
 
         LVal tval = func->gen_scalar_tempvar();
-        //outasm("t%d = %c%d [%s] // lval - array", tval, cdef(def), def->index, tidx.eeyore_ref());
-        func->push_stmt(new IrArrayGet(tval, def, tidx));
+        //outasm("t%d = %c%d [%s] // lval - array", tval, cdef(def_or_null), def_or_null->index, tidx.eeyore_ref_local());
+        func->push_stmt(new IrArrayGet(func, tval, def, tidx));
         return tval;
     } else { //primitive
         return def;
@@ -253,27 +245,27 @@ RVal AstExpFunctionCall::gen_rval(IrFuncDef *func) {
     // special functions
     if(name=="starttime") {
         //outasm("param %d // func call special", loc.lineno);
-        func->push_stmt(new IrParam(RVal::asConstExp(loc.lineno)), "func call special");
+        func->push_stmt(new IrParam(func, RVal::asConstExp(loc.lineno)), "func call special");
         //outasm("call f__sysy_starttime // func call special");
-        func->push_stmt(new IrCallVoid("_sysy_starttime"));
+        func->push_stmt(new IrCallVoid(func, "_sysy_starttime"));
         return RVal::asTempVar(-1);
     }
     if(name=="stoptime") {
         //outasm("param %d // func call special", loc.lineno);
-        func->push_stmt(new IrParam(RVal::asConstExp(loc.lineno)), "func call special");
+        func->push_stmt(new IrParam(func, RVal::asConstExp(loc.lineno)), "func call special");
         //outasm("call f__sysy_stoptime // func call special");
-        func->push_stmt(new IrCallVoid("_sysy_stoptime"));
+        func->push_stmt(new IrCallVoid(func, "_sysy_stoptime"));
         return RVal::asTempVar(-1);
     }
 
     if(def->type==FuncVoid) {
         //outasm("call f_%s", name.c_str());
-        func->push_stmt(new IrCallVoid(name));
+        func->push_stmt(new IrCallVoid(func, name));
         return RVal::asTempVar(-1);
     } else {
         LVal tret = func->gen_scalar_tempvar();
         //outasm("t%d = call f_%s", tret, name.c_str());
-        func->push_stmt(new IrCall(tret, name));
+        func->push_stmt(new IrCall(func, tret, name));
         return tret;
     }
 }
@@ -289,8 +281,8 @@ RVal AstExpOpUnary::gen_rval(IrFuncDef *func) {
     if(top.type == RVal::TempVar && top.val.tempvar < 0)
         generror("unary operand not primitive");
 
-    //outasm("t%d = %s %s", tret, cvt_from_unary(op).c_str(), top.eeyore_ref());
-    func->push_stmt(new IrOpUnary(tret, op, top));
+    //outasm("t%d = %s %s", tret, cvt_from_unary(op).c_str(), top.eeyore_ref_local());
+    func->push_stmt(new IrOpUnary(func, tret, op, top));
     return tret;
 }
 
@@ -307,40 +299,40 @@ RVal AstExpOpBinary::gen_rval(IrFuncDef *func) {
     // these ops will shortcircuit
     if(op==OpAnd) {
         //outasm("t%d = 0 // op and - default value", tret);
-        func->push_stmt(new IrMov(tret, RVal::asConstExp(0)), "op and - default value");
+        func->push_stmt(new IrMov(func, tret, RVal::asConstExp(0)), "op and - default value");
         lskip = func->gen_label();
 
         top1 = operand1->gen_rval(func);
-        //outasm("if %s == 0 goto l%d // op and - test 1", top1.eeyore_ref(), lskip);
-        func->push_stmt(new IrCondGoto(top1, OpEq, RVal::asConstExp(0), lskip), "op and - test 1");
+        //outasm("if %s == 0 goto l%d // op and - test 1", top1.eeyore_ref_local(), lskip);
+        func->push_stmt(new IrCondGoto(func, top1, OpEq, RVal::asConstExp(0), lskip), "op and - test 1");
 
         top2 = operand2->gen_rval(func);
-        //outasm("if %s == 0 goto l%d // op and - test 2", top2.eeyore_ref(), lskip);
-        func->push_stmt(new IrCondGoto(top2, OpEq, RVal::asConstExp(0), lskip), "op and - test 2");
+        //outasm("if %s == 0 goto l%d // op and - test 2", top2.eeyore_ref_local(), lskip);
+        func->push_stmt(new IrCondGoto(func, top2, OpEq, RVal::asConstExp(0), lskip), "op and - test 2");
 
         //outasm("t%d = 1 // op and - pass test", tret);
-        func->push_stmt(new IrMov(tret, RVal::asConstExp(1)), "op and - passed test");
+        func->push_stmt(new IrMov(func, tret, RVal::asConstExp(1)), "op and - passed test");
         //outasm("l%d: // op and - lskip", lskip);
-        func->push_stmt(new IrLabel(lskip), "op and - lskip");
+        func->push_stmt(new IrLabel(func, lskip), "op and - lskip");
         return tret;
 
     } else if(op==OpOr) {
         //outasm("t%d = 1 // op or - default value", tret);
-        func->push_stmt(new IrMov(tret, RVal::asConstExp(1)), "op or - default value");
+        func->push_stmt(new IrMov(func, tret, RVal::asConstExp(1)), "op or - default value");
         lskip = func->gen_label();
 
         top1 = operand1->gen_rval(func);
-        //outasm("if %s != 0 goto l%d // op or - test 1", top1.eeyore_ref(), lskip);
-        func->push_stmt(new IrCondGoto(top1, OpNeq, RVal::asConstExp(0), lskip), "op or - test 1");
+        //outasm("if %s != 0 goto l%d // op or - test 1", top1.eeyore_ref_local(), lskip);
+        func->push_stmt(new IrCondGoto(func, top1, OpNeq, RVal::asConstExp(0), lskip), "op or - test 1");
 
         top2 = operand2->gen_rval(func);
-        //outasm("if %s != 0 goto l%d // op or - test 2", top2.eeyore_ref(), lskip);
-        func->push_stmt(new IrCondGoto(top2, OpNeq, RVal::asConstExp(0), lskip), "op or - test 2");
+        //outasm("if %s != 0 goto l%d // op or - test 2", top2.eeyore_ref_local(), lskip);
+        func->push_stmt(new IrCondGoto(func, top2, OpNeq, RVal::asConstExp(0), lskip), "op or - test 2");
 
         //outasm("t%d = 0 // op or - pass test", tret);
-        func->push_stmt(new IrMov(tret, RVal::asConstExp(0)), "op or - passed test");
+        func->push_stmt(new IrMov(func, tret, RVal::asConstExp(0)), "op or - passed test");
         //outasm("l%d: // op or - lskip", lskip);
-        func->push_stmt(new IrLabel(lskip), "op or - lskip");
+        func->push_stmt(new IrLabel(func, lskip), "op or - lskip");
         return tret;
     }
 
@@ -352,7 +344,7 @@ RVal AstExpOpBinary::gen_rval(IrFuncDef *func) {
     if(top2.type == RVal::TempVar && top2.val.tempvar < 0)
         generror("binary operand2 not primitive");
 
-    //outasm("t%d = %s %s %s", tret, top1.eeyore_ref(), cvt_from_binary(op).c_str(), top2.eeyore_ref());
-    func->push_stmt(new IrOpBinary(tret, top1, op, top2));
+    //outasm("t%d = %s %s %s", tret, top1.eeyore_ref_local(), cvt_from_binary(op).c_str(), top2.eeyore_ref());
+    func->push_stmt(new IrOpBinary(func, tret, top1, op, top2));
     return tret;
 }

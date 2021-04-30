@@ -1,6 +1,6 @@
 /**
  * In this phase, we construct a complete AST from parse result.
- * Variable (function) names are mapped to its def.
+ * Variable (function) names are mapped to its def_or_null.
  * We also parse initval and array index here.
  * Some type checking are done.
  */
@@ -222,13 +222,13 @@ public:
 
     void visit(AstExpLVal *node, SymTable *tbl) {
         node->def = tbl->var.get(node->name);
-        node->dim_left = (int)(node->def->idxinfo->val.size() - node->idxinfo->val.size());
+        node->dim_left = (int)(node->def->idxinfo->dims() - node->idxinfo->dims());
         if(node->dim_left<0)
             typeerror(
                 "lval shape mismatch: %s, defined %d, index actual %d\n",
                 node->name.c_str(),
-                (int)node->def->idxinfo->val.size(),
-                (int)node->idxinfo->val.size()
+                (int)node->def->idxinfo->dims(),
+                (int)node->idxinfo->dims()
             );
         visit(node->idxinfo, tbl);
     }
@@ -250,14 +250,14 @@ public:
 
         // check each param depth
         for(int i=0; i<(int)node->def->params->val.size(); i++) {
-            int expect_depth = node->def->params->val[i]->idxinfo->val.size();
+            int expect_depth = node->def->params->val[i]->idxinfo->dims();
             auto *lval = dynamic_cast<AstExpLVal*>(node->params->val[i]);
 
             if(expect_depth>0) { // expected array
                 if(!lval)
                     typeerror("function `%s` param %d expects array", node->name.c_str(), i);
-                int var_depth = lval->def->idxinfo->val.size();
-                int idx_depth = lval->idxinfo->val.size();
+                int var_depth = lval->def->idxinfo->dims();
+                int idx_depth = lval->idxinfo->dims();
                 if(expect_depth!=var_depth-idx_depth)
                     typeerror(
                         "function `%s` param %d expects depth %d but got %d - %d",
@@ -268,8 +268,8 @@ public:
                 if(!lval) { // not a lval
                     // good, because exp is always primitive
                 } else { // if is a lval, check depth should be 0
-                    int var_depth = lval->def->idxinfo->val.size();
-                    int idx_depth = lval->idxinfo->val.size();
+                    int var_depth = lval->def->idxinfo->dims();
+                    int idx_depth = lval->idxinfo->dims();
                     if(var_depth!=idx_depth)
                         typeerror(
                             "function `%s` param %d expects primitive but got %d - %d",
