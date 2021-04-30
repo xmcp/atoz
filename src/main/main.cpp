@@ -66,12 +66,13 @@ int main(int argc, char **argv) {
     auto *ir_root = new IrRoot();
     ast_root->gen_ir(ir_root);
 
-    /// GEN CFG, REG ALLOC
+    /// GEN CFG, REG ALLOC, CALC DESTROY SET
+    ir_root->install_builtin_destroy_sets();
     for(const auto& funcpair: ir_root->funcs) {
         auto func = funcpair.first;
-
         func->connect_all_cfg();
         func->regalloc();
+        func->report_destroyed_set();
     }
 
     /// GEN EEYORE

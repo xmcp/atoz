@@ -135,7 +135,7 @@ void IrFuncDef::output_eeyore(list<string> &buf) {
             for(int use: stmt.first->uses())
                 ss << demystify_reguid(use) << ' ';
             ss << "| ALIVE: ";
-            for(int alive: stmt.first->_regalloc_alive_vars)
+            for(int alive: stmt.first->alive_vars)
                 ss << demystify_reguid(alive) << ' ';
             outcomment("%s", ss.str().c_str());
         }

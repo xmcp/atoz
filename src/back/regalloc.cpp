@@ -29,7 +29,7 @@ void propagate_alive_vars(IrFuncDef *func) {
 
         unordered_set<int> meet;
         for(auto next: stmt->next)
-            for(auto x: next->_regalloc_alive_vars)
+            for(auto x: next->alive_vars)
                 meet.insert(x);
 
         for(auto def: stmt->defs())
@@ -37,8 +37,8 @@ void propagate_alive_vars(IrFuncDef *func) {
         for(auto use: stmt->uses())
             meet.insert(use);
 
-        if(stmt->_regalloc_alive_vars != meet) { // update alive vars
-            stmt->_regalloc_alive_vars = meet;
+        if(stmt->alive_vars != meet) { // update alive vars
+            stmt->alive_vars = meet;
             for(auto prev: stmt->prev)
                 if(!prev->_regalloc_inqueue) {
                     prev->_regalloc_inqueue = true;
@@ -131,12 +131,12 @@ CorrGraph collect_correlation(IrFuncDef *func) {
         IrStmt *stmt = q.front();
         q.pop();
 
-        for(auto var: stmt->_regalloc_alive_vars)
+        for(auto var: stmt->alive_vars)
             graph.addnode(var);
 
-        for(auto it = stmt->_regalloc_alive_vars.cbegin(); it!=stmt->_regalloc_alive_vars.end(); it++) {
+        for(auto it = stmt->alive_vars.cbegin(); it != stmt->alive_vars.end(); it++) {
             auto it2 = it;
-            for(it2++; it2!=stmt->_regalloc_alive_vars.end(); it2++)
+            for(it2++; it2!=stmt->alive_vars.end(); it2++)
                 graph.addedge(*it, *it2);
         }
 
@@ -145,6 +145,21 @@ CorrGraph collect_correlation(IrFuncDef *func) {
                 next->_regalloc_inqueue = true;
                 q.push(next);
             }
+    }
+
+    // remove unreachable stmts
+    for(auto it=func->stmts.begin(); it!=func->stmts.end();) {
+        if(!it->first->_regalloc_inqueue) {
+            list<string> buf;
+            it->first->output_eeyore(buf);
+            printf("info: removed unused stmt in %s:\n", func->name.c_str());
+            for(const auto &line: buf)
+                printf("  > %s\n", line.c_str());
+
+            it = func->stmts.erase(it);
+        }
+        else
+            it++;
     }
 
     return graph;
@@ -187,7 +202,9 @@ void swap_preg(Preg a, Preg b, unordered_map<int, Vreg> &vreg_map) {
 
 void IrFuncDef::regalloc() {
     propagate_alive_vars(this);
-    auto graph = collect_correlation(this); // only `regpooled` (tempvar, arg, local scalar) vars in this graph
+    auto graph = collect_correlation(this); // will also remove unreachable stmts
+
+    // only `regpooled` (tempvar, arg, local scalar) vars in this graph
 
     for(const auto& declpair: decls) {
         if(declpair.first->def_or_null==nullptr) // skip tempvar
@@ -203,9 +220,9 @@ void IrFuncDef::regalloc() {
             auto totelems = declpair.first->dest.val.reference->initval.totelems;
             vreg_map.insert(make_pair(
                 reguid,
-                Vreg::asStack(totelems, stacksize)
+                Vreg::asStack(totelems, spillsize)
             ));
-            stacksize += totelems;
+            spillsize += totelems;
         }
     }
 
@@ -238,8 +255,8 @@ void IrFuncDef::regalloc() {
             // map it onto stack
             auto it = decl_map.find(x); // local -> found, tempvar -> notfound
             int arrelems = it==decl_map.end() ? 1 : it->second->initval.totelems;
-            vreg_map.insert(make_pair(x, Vreg::asStack(arrelems, stacksize)));
-            stacksize += arrelems;
+            vreg_map.insert(make_pair(x, Vreg::asStack(arrelems, spillsize)));
+            spillsize += arrelems;
         }
     }
 

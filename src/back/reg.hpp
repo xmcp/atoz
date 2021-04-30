@@ -2,6 +2,16 @@
 
 #include <cassert>
 
+/*
+
+POOLED: tempvar
+POOLED(=REG): ref param
+POOLED: ref local scalar
+=STK: ref local array
+=GLB: ref global
+
+*/
+
 struct Preg {
     char cat;
     int index;
@@ -26,6 +36,11 @@ struct Preg {
     bool operator!=(const Preg &rhs) const {
         return !(rhs == *this);
     }
+    struct Hash {
+        size_t operator()(const Preg &p) const {
+            return p.cat*13 + p.index;
+        }
+    };
 
     string tigger_ref() {
         char buf[16];

@@ -157,21 +157,22 @@ struct IrDeclContainer: Ir {
 };
 
 struct IrFuncDef: IrDeclContainer {
+    IrRoot *root;
+
     FuncType type;
     string name;
     AstFuncDefParams *params;
     list<Commented(IrStmt*)> stmts;
 
-    // used in gen_label and gen_scalar_tempvar
-    IrRoot *root;
-
     int return_label;
-    int stacksize; // in words
     LVal _eeyore_retval_var; // used in gen_eeyore, this tempvar is not in cfg because tigger doesn't need it
 
+    int spillsize; // in words
+    int callersavesize; // in words, initialized in `report_destroyed_set`
+
     IrFuncDef(IrRoot *root, FuncType type, string name, AstFuncDefParams *params): IrDeclContainer(),
-        root(root), type(type), name(name), params(params), stmts({}), stacksize(0),
-        return_label(gen_label()), _eeyore_retval_var(gen_scalar_tempvar()) {}
+       root(root), type(type), name(name), params(params), stmts({}), spillsize(0), callersavesize(0),
+       return_label(gen_label()), _eeyore_retval_var(gen_scalar_tempvar()) {}
     void push_stmt(IrStmt *stmt, string comment = "");
 
     int gen_label();
@@ -182,11 +183,12 @@ struct IrFuncDef: IrDeclContainer {
     // cfg
 
     unordered_map<int, IrLabel*> labels; // label id -> ir node
-    unordered_map<int, Vreg> vreg_map; // def_or_null uid -> vreg
-    unordered_map<int, AstDef*> decl_map; // def_or_null uid -> def_or_null node
+    unordered_map<int, Vreg> vreg_map; // def uid -> vreg
+    unordered_map<int, AstDef*> decl_map; // def uid -> def node
 
     void connect_all_cfg();
     void regalloc();
+    void report_destroyed_set();
 };
 
 struct IrRoot: IrDeclContainer {
@@ -194,6 +196,8 @@ struct IrRoot: IrDeclContainer {
     list<Commented(IrFuncDef*)> funcs;
     int tempvar_top;
     int label_top;
+
+    unordered_map<string, unordered_set<Preg, Preg::Hash>> destroy_sets;
 
     IrRoot():
         IrDeclContainer(), inits({}), funcs({}), tempvar_top(0), label_top(0) {}
@@ -214,6 +218,8 @@ struct IrRoot: IrDeclContainer {
     }
 
     void output_eeyore(list<string> &buf);
+
+    void install_builtin_destroy_sets();
 };
 
 ///// STATEMENT
@@ -233,7 +239,7 @@ struct IrStmt: Ir {
 
     // regalloc
     bool _regalloc_inqueue = false;
-    unordered_set<int> _regalloc_alive_vars;
+    unordered_set<int> alive_vars;
 };
 
 #define push_if_pooled(x) do { \
