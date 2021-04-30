@@ -10,11 +10,10 @@ lex.yy.cpp: sysy.tab
 	lex --noline -o build/lex.yy.cpp src/sysy.l
 
 srcfiles:
-	cp -t build src/*.cpp
-	cp -t build src/*.hpp
+	cp -t build -R src/*
 
 compiler: srcfiles sysy.tab lex.yy.cpp
-	g++ ${CXX_OPTIONS} -o build/compiler -Ibuild build/*.cpp
+	g++ ${CXX_OPTIONS} -o build/compiler -Ibuild $(find build -type f -iname *.cpp -print)
 
 clean:
 	rm build/*

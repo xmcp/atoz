@@ -1,8 +1,8 @@
 #include <cstdio>
 using std::sprintf;
 
-#include "ir.hpp"
-#include "ast.hpp"
+#include "back/ir.hpp"
+#include "front/ast.hpp"
 
 const bool EEYORE_GEN_COMMENTS = true;
 
@@ -49,21 +49,21 @@ string LVal::eeyore_ref() {
 
 #define eey(v) ((v).eeyore_ref().c_str())
 
-void IrDecl::output_eeyore(vector<string> &buf) {
+void IrDecl::output_eeyore(list<string> &buf) {
     if(is_array)
         outasm("var %d %s", size_bytes, eey(dest));
     else
         outasm("var %s", eey(dest));
 }
 
-void IrInit::output_eeyore(vector<string> &buf) {
+void IrInit::output_eeyore(list<string> &buf) {
     if(is_array)
         outasm("%s [%d] = %d", eey(dest), offset_bytes, val);
     else
         outasm("%s = %d", eey(dest), val);
 }
 
-void IrFuncDef::output_eeyore(vector<string> &buf) {
+void IrFuncDef::output_eeyore(list<string> &buf) {
     outasm("f_%s [%d]", name.c_str(), args);
 
     for(auto decl: decls) {
@@ -81,7 +81,7 @@ void IrFuncDef::output_eeyore(vector<string> &buf) {
     outasm("end f_%s", name.c_str());
 }
 
-void IrRoot::output_eeyore(vector<string> &buf) {
+void IrRoot::output_eeyore(list<string> &buf) {
     outasm("// BEGIN EEYORE");
 
     outasm("//--- GLOBAL DECL");
@@ -111,55 +111,55 @@ void IrRoot::output_eeyore(vector<string> &buf) {
     outasm("// END EEYORE");
 }
 
-void IrOpBinary::output_eeyore(vector<string> &buf) {
+void IrOpBinary::output_eeyore(list<string> &buf) {
     outstmt("%s = %s %s %s", eey(dest), eey(operand1), cvt_from_binary(op).c_str(), eey(operand2));
 }
 
-void IrOpUnary::output_eeyore(vector<string> &buf) {
+void IrOpUnary::output_eeyore(list<string> &buf) {
     outstmt("%s = %s %s", eey(dest), cvt_from_unary(op).c_str(), eey(operand));
 }
 
-void IrMov::output_eeyore(vector<string> &buf) {
+void IrMov::output_eeyore(list<string> &buf) {
     outstmt("%s = %s", eey(dest), eey(src));
 }
 
-void IrArraySet::output_eeyore(vector<string> &buf) {
+void IrArraySet::output_eeyore(list<string> &buf) {
     outstmt("%s [%s] = %s", eey(dest), eey(doffset), eey(src));
 }
 
-void IrArrayGet::output_eeyore(vector<string> &buf) {
+void IrArrayGet::output_eeyore(list<string> &buf) {
     outstmt("%s = %s [%s]", eey(dest), eey(src), eey(soffset));
 }
 
-void IrCondGoto::output_eeyore(vector<string> &buf) {
+void IrCondGoto::output_eeyore(list<string> &buf) {
     outstmt("if %s %s %s goto l%d", eey(operand1), cvt_from_binary(op).c_str(), eey(operand2), label);
 }
 
-void IrGoto::output_eeyore(vector<string> &buf) {
+void IrGoto::output_eeyore(list<string> &buf) {
     outstmt("goto l%d", label);
 }
 
-void IrLabel::output_eeyore(vector<string> &buf) {
+void IrLabel::output_eeyore(list<string> &buf) {
     outstmt("l%d:", label);
 }
 
-void IrParam::output_eeyore(vector<string> &buf) {
+void IrParam::output_eeyore(list<string> &buf) {
     outstmt("param %s", eey(param));
 }
 
-void IrCallVoid::output_eeyore(vector<string> &buf) {
+void IrCallVoid::output_eeyore(list<string> &buf) {
     outstmt("call f_%s", name.c_str());
 }
 
-void IrCall::output_eeyore(vector<string> &buf) {
+void IrCall::output_eeyore(list<string> &buf) {
     outstmt("%s = call f_%s", eey(ret), name.c_str());
 }
 
-void IrReturnVoid::output_eeyore(vector<string> &buf) {
+void IrReturnVoid::output_eeyore(list<string> &buf) {
     outstmt("return");
 }
 
-void IrReturn::output_eeyore(vector<string> &buf) {
+void IrReturn::output_eeyore(list<string> &buf) {
     outstmt("return %s", eey(retval));
 }
 

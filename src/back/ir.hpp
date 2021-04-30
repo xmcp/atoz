@@ -1,12 +1,14 @@
 #pragma once
 
 #include <vector>
+#include <list>
 #include <utility> // pair
 using std::vector;
+using std::list;
 using std::pair;
 using std::make_pair;
 
-#include "enum_defs.hpp"
+#include "front/enum_defs.hpp"
 
 #define Commented(x) pair<x, string>
 
@@ -104,7 +106,7 @@ struct IrDecl: Ir {
     IrDecl(LVal dest, int elems):
         dest(dest), is_array(true), size_bytes(elems*4) {}
 
-    void output_eeyore(vector<string> &buf);
+    void output_eeyore(list<string> &buf);
 };
 
 struct IrInit: Ir {
@@ -118,11 +120,11 @@ struct IrInit: Ir {
     IrInit(LVal dest, int idx, int val):
         dest(dest), is_array(true), offset_bytes(idx*4), val(val) {}
 
-    void output_eeyore(vector<string> &buf);
+    void output_eeyore(list<string> &buf);
 };
 
 struct IrDeclContainer: Ir {
-    vector<Commented(IrDecl*)> decls;
+    list<Commented(IrDecl*)> decls;
 
     IrDeclContainer():
         decls({}) {}
@@ -134,7 +136,7 @@ struct IrDeclContainer: Ir {
 struct IrFuncDef: IrDeclContainer {
     string name;
     int args;
-    vector<Commented(IrStmt*)> stmts;
+    list<Commented(IrStmt*)> stmts;
 
     // used in gen_label and gen_scalar_tempvar
     IrRoot *root;
@@ -148,12 +150,12 @@ struct IrFuncDef: IrDeclContainer {
     int gen_label();
     LVal gen_scalar_tempvar();
 
-    void output_eeyore(vector<string> &buf);
+    void output_eeyore(list<string> &buf);
 };
 
 struct IrRoot: IrDeclContainer {
-    vector<Commented(IrInit*)> inits;
-    vector<Commented(IrFuncDef*)> funcs;
+    list<Commented(IrInit*)> inits;
+    list<Commented(IrFuncDef*)> funcs;
     int tempvar_top;
     int label_top;
 
@@ -176,13 +178,13 @@ struct IrRoot: IrDeclContainer {
         return tvar;
     }
 
-    void output_eeyore(vector<string> &buf);
+    void output_eeyore(list<string> &buf);
 };
 
 ///// STATEMENT
 
 struct IrStmt: Ir {
-    virtual void output_eeyore(vector<string> &buf) = 0;
+    virtual void output_eeyore(list<string> &buf) = 0;
 };
 
 struct IrOpBinary: IrStmt {
@@ -194,7 +196,7 @@ struct IrOpBinary: IrStmt {
     IrOpBinary(LVal dest, RVal operand1, BinaryOpKinds op, RVal operand2):
         dest(dest), operand1(operand1), op(op), operand2(operand2) {}
 
-    void output_eeyore(vector<string> &buf) override;
+    void output_eeyore(list<string> &buf) override;
 };
 
 struct IrOpUnary: IrStmt {
@@ -205,7 +207,7 @@ struct IrOpUnary: IrStmt {
     IrOpUnary(LVal dest, UnaryOpKinds op, RVal operand):
         dest(dest), op(op), operand(operand) {}
 
-    void output_eeyore(vector<string> &buf) override;
+    void output_eeyore(list<string> &buf) override;
 };
 
 struct IrMov: IrStmt {
@@ -215,7 +217,7 @@ struct IrMov: IrStmt {
     IrMov(LVal dest, RVal src):
         dest(dest), src(src) {}
 
-    void output_eeyore(vector<string> &buf) override;
+    void output_eeyore(list<string> &buf) override;
 };
 
 struct IrArraySet: IrStmt {
@@ -226,7 +228,7 @@ struct IrArraySet: IrStmt {
     IrArraySet(LVal dest, RVal doffset, RVal src):
         dest(dest), doffset(doffset), src(src) {}
 
-    void output_eeyore(vector<string> &buf) override;
+    void output_eeyore(list<string> &buf) override;
 };
 
 struct IrArrayGet: IrStmt {
@@ -237,7 +239,7 @@ struct IrArrayGet: IrStmt {
     IrArrayGet(LVal dest, RVal src, RVal soffset):
         dest(dest), src(src), soffset(soffset) {}
 
-    void output_eeyore(vector<string> &buf) override;
+    void output_eeyore(list<string> &buf) override;
 };
 
 
@@ -250,7 +252,7 @@ struct IrCondGoto: IrStmt {
     IrCondGoto(RVal operand1, BinaryOpKinds op, RVal operand2, int label):
         operand1(operand1), op(op), operand2(operand2), label(label) {}
 
-    void output_eeyore(vector<string> &buf) override;
+    void output_eeyore(list<string> &buf) override;
 };
 
 struct IrGoto: IrStmt {
@@ -259,7 +261,7 @@ struct IrGoto: IrStmt {
     IrGoto(int label):
         label(label) {}
 
-    void output_eeyore(vector<string> &buf) override;
+    void output_eeyore(list<string> &buf) override;
 };
 
 struct IrLabel: IrStmt {
@@ -268,7 +270,7 @@ struct IrLabel: IrStmt {
     IrLabel(int label):
         label(label) {}
 
-    void output_eeyore(vector<string> &buf) override;
+    void output_eeyore(list<string> &buf) override;
 };
 
 struct IrParam: IrStmt {
@@ -277,7 +279,7 @@ struct IrParam: IrStmt {
     IrParam(RVal param):
         param(param) {}
 
-    void output_eeyore(vector<string> &buf) override;
+    void output_eeyore(list<string> &buf) override;
 };
 
 struct IrCallVoid: IrStmt {
@@ -286,7 +288,7 @@ struct IrCallVoid: IrStmt {
     IrCallVoid(string fn):
         name(fn) {}
 
-    void output_eeyore(vector<string> &buf) override;
+    void output_eeyore(list<string> &buf) override;
 };
 
 struct IrCall: IrStmt {
@@ -296,13 +298,13 @@ struct IrCall: IrStmt {
     IrCall(LVal ret, string fn):
         ret(ret), name(fn) {}
 
-    void output_eeyore(vector<string> &buf) override;
+    void output_eeyore(list<string> &buf) override;
 };
 
 struct IrReturnVoid: IrStmt {
     IrReturnVoid() {}
 
-    void output_eeyore(vector<string> &buf) override;
+    void output_eeyore(list<string> &buf) override;
 };
 
 struct IrReturn: IrStmt {
@@ -310,5 +312,5 @@ struct IrReturn: IrStmt {
     IrReturn(RVal retval):
         retval(retval) {}
 
-    void output_eeyore(vector<string> &buf) override;
+    void output_eeyore(list<string> &buf) override;
 };

@@ -2,7 +2,7 @@
 #include <cstring>
 using namespace std;
 
-#include "ast.hpp"
+#include "front/ast.hpp"
 
 extern int yyparse();
 extern void yyrestart(FILE*);
@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
     auto *ir_root = new IrRoot();
     ast_root->gen_ir(ir_root);
 
-    vector<string> eey_buf;
+    list<string> eey_buf;
     ir_root->output_eeyore(eey_buf);
 
     for(const auto &s: eey_buf)

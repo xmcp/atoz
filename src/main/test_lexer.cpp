@@ -1,8 +1,8 @@
 #include <string>
 using std::string;
 
-#include "enum_defs.hpp"
-#include "ast.hpp"
+#include "front/enum_defs.hpp"
+#include "front/ast.hpp"
 #include "sysy.tab.hpp"
 
 extern int yylex();
