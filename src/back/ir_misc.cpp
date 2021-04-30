@@ -22,7 +22,7 @@ bool RVal::regpooled() {
     if(type==Reference && val.reference->pos==DefLocal && val.reference->idxinfo->dims()>0) // local array
         return false;
 
-    // tempvar, local scalar, arg
+    // tempvar, local scalar, param
     return true;
 }
 int RVal::reguid() {
@@ -43,7 +43,7 @@ bool LVal::regpooled() {
     if(type==Reference && val.reference->pos==DefLocal && val.reference->idxinfo->dims()>0) // local array
         return false;
 
-    // tempvar, local scalar, arg
+    // tempvar, local scalar, param
     return true;
 }
 int LVal::reguid() {

@@ -21,13 +21,17 @@ string RVal::eeyore_ref_local(IrFuncDef *func) {
     char buf[16];
 
     if(OUTPUT_REGALLOC_PREFIX && type != ConstExp) {
-        auto it = func->vreg_map.find(reguid());
-        if(type==TempVar && val.tempvar==func->_eeyore_retval_var.val.tempvar)
-            pfx = "{retval}";
-        else if(it==func->vreg_map.end())
-            pfx = "{???}";
-        else
-            pfx = it->second.tigger_ref();
+        if(type==Reference && val.reference->pos==DefGlobal)
+            pfx = "{global}";
+        else {
+            auto it = func->vreg_map.find(reguid());
+            if(type==TempVar && val.tempvar==func->_eeyore_retval_var.val.tempvar)
+                pfx = "{retval}";
+            else if(it==func->vreg_map.end())
+                pfx = "{???}";
+            else
+                pfx = it->second.tigger_ref();
+        }
     }
 
     switch(type) {
@@ -52,13 +56,17 @@ string LVal::eeyore_ref_local(IrFuncDef *func) {
     char buf[16];
 
     if(OUTPUT_REGALLOC_PREFIX) {
-        auto it = func->vreg_map.find(reguid());
-        if(type==TempVar && val.tempvar==func->_eeyore_retval_var.val.tempvar)
-            pfx = "{retval}";
-        else if(it==func->vreg_map.end())
-            pfx = "{???}";
-        else
-            pfx = it->second.tigger_ref();
+        if(type==Reference && val.reference->pos==DefGlobal)
+            pfx = "{global}";
+        else {
+            auto it = func->vreg_map.find(reguid());
+            if(type==TempVar && val.tempvar==func->_eeyore_retval_var.val.tempvar)
+                pfx = "{retval}";
+            else if(it==func->vreg_map.end())
+                pfx = "{???}";
+            else
+                pfx = it->second.tigger_ref();
+        }
     }
 
     switch(type) {
@@ -89,7 +97,7 @@ string LVal::eeyore_ref_local(IrFuncDef *func) {
 
 void IrDecl::output_eeyore(list<string> &buf) {
     if(def_or_null!=nullptr && def_or_null->idxinfo->dims() > 0) // array var
-        outasm("var %d %s", def_or_null->initval.totelems, dest.eeyore_ref_global().c_str());
+        outasm("var %d %s", def_or_null->initval.totelems*4, dest.eeyore_ref_global().c_str());
     else
         outasm("var %s", dest.eeyore_ref_global().c_str());
 }
@@ -106,7 +114,7 @@ void IrInit::output_eeyore(list<string> &buf) {
 }
 
 void IrFuncDef::output_eeyore(list<string> &buf) {
-    outasm("f_%s [%d]", name.c_str(), args);
+    outasm("f_%s [%d]", name.c_str(), (int)params->val.size());
 
     for(const auto& decl: decls) {
         decl.first->output_eeyore(buf);
@@ -179,11 +187,11 @@ void IrMov::output_eeyore(list<string> &buf) {
 }
 
 void IrArraySet::output_eeyore(list<string> &buf) {
-    outstmt("%s [%s] = %s", eey(dest), eey(doffset), eey(src));
+    outstmt("%s [%d] = %s", eey(dest), doffset, eey(src));
 }
 
 void IrArrayGet::output_eeyore(list<string> &buf) {
-    outstmt("%s = %s [%s]", eey(dest), eey(src), eey(soffset));
+    outstmt("%s = %s [%d]", eey(dest), eey(src), soffset);
 }
 
 void IrCondGoto::output_eeyore(list<string> &buf) {

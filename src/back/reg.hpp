@@ -40,22 +40,25 @@ struct Vreg {
     } pos;
 
     int stackspan;
+    int stackoffset;
     Preg reg;
 
 private:
     Vreg(bool instack):
-        pos(instack ? VregInStack : VregInReg), stackspan(0), reg('x', 0) {}
+        pos(instack ? VregInStack : VregInReg), stackspan(0), stackoffset(-1), reg('x', 0) {}
 
 public:
     Vreg(Preg reg):
-        pos(VregInReg), stackspan(0), reg(reg) {}
+        pos(VregInReg), stackspan(0), stackoffset(-1), reg(reg) {}
     static Vreg asReg(char cat, int index) {
         return {Preg(cat, index)};
     }
-    static Vreg asStack(int elems) {
+    static Vreg asStack(int elems, int offset) {
         Vreg ret = Vreg(true);
         assert(elems>0);
+        assert(offset>=0);
         ret.stackspan = elems;
+        ret.stackoffset = offset;
         return ret;
     }
 
@@ -64,7 +67,10 @@ public:
             return reg.tigger_ref();
         else {
             char buf[16];
-            sprintf(buf, "{stk *%d}", stackspan);
+            if(stackspan==1)
+                sprintf(buf, "{stk #%d}", stackoffset);
+            else
+                sprintf(buf, "{stk #%d +%d}", stackoffset, stackspan);
             return string(buf);
         }
     }

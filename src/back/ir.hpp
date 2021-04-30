@@ -31,6 +31,7 @@ struct IrFuncDef;
 struct IrStmt;
 struct IrLabel;
 struct AstDef;
+struct AstFuncDefParams;
 
 ///// BASE
 
@@ -158,17 +159,18 @@ struct IrDeclContainer: Ir {
 struct IrFuncDef: IrDeclContainer {
     FuncType type;
     string name;
-    int args;
+    AstFuncDefParams *params;
     list<Commented(IrStmt*)> stmts;
 
     // used in gen_label and gen_scalar_tempvar
     IrRoot *root;
 
     int return_label;
+    int stacksize; // in words
     LVal _eeyore_retval_var; // used in gen_eeyore, this tempvar is not in cfg because tigger doesn't need it
 
-    IrFuncDef(IrRoot *root, FuncType type, string name, int args): IrDeclContainer(),
-        root(root), type(type), name(name), args(args), stmts({}),
+    IrFuncDef(IrRoot *root, FuncType type, string name, AstFuncDefParams *params): IrDeclContainer(),
+        root(root), type(type), name(name), params(params), stmts({}), stacksize(0),
         return_label(gen_label()), _eeyore_retval_var(gen_scalar_tempvar()) {}
     void push_stmt(IrStmt *stmt, string comment = "");
 
@@ -311,11 +313,13 @@ struct IrMov: IrStmt {
 
 struct IrArraySet: IrStmt {
     LVal dest;
-    RVal doffset;
+    int doffset;
     RVal src;
 
-    IrArraySet(IrFuncDef *func, LVal dest, RVal doffset, RVal src): IrStmt(func),
-        dest(dest), doffset(doffset), src(src) {}
+    IrArraySet(IrFuncDef *func, LVal dest, int doffset, RVal src): IrStmt(func),
+        dest(dest), doffset(doffset), src(src) {
+        assert(doffset%4==0);
+    }
 
     void output_eeyore(list<string> &buf) override;
 
@@ -327,6 +331,7 @@ struct IrArraySet: IrStmt {
     }
     vector<int> uses() override {
         auto v = vector<int>();
+        push_if_pooled(dest); // the ptr to array is read
         push_if_pooled(src);
         return v;
     }
@@ -335,10 +340,12 @@ struct IrArraySet: IrStmt {
 struct IrArrayGet: IrStmt {
     LVal dest;
     RVal src;
-    RVal soffset;
+    int soffset;
 
-    IrArrayGet(IrFuncDef *func, LVal dest, RVal src, RVal soffset): IrStmt(func),
-        dest(dest), src(src), soffset(soffset) {}
+    IrArrayGet(IrFuncDef *func, LVal dest, RVal src, int soffset): IrStmt(func),
+        dest(dest), src(src), soffset(soffset) {
+        assert(soffset%4==0);
+    }
 
     void output_eeyore(list<string> &buf) override;
 

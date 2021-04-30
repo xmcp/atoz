@@ -70,14 +70,14 @@ void AstDef::gen_ir_init_local(IrFuncDef *func) {
             if(initval.value[i] != nullptr) {
                 RVal trval = initval.value[i]->gen_rval(func);
                 //outasm("T%d [%d] = %s // init %s local #%d/%d", index, i*4, trval.eeyore_ref_local(), name.c_str(), i, initval.totelems);
-                func->push_stmt(new IrArraySet(func, this, RVal::asConstExp(i*4), trval), name);
+                func->push_stmt(new IrArraySet(func, this, i*4, trval), name);
             }
     }
 }
 
 
 void AstFuncDef::gen_ir(IrRoot *root) {
-    auto *func = new IrFuncDef(root, type, name, (int)params->val.size());
+    auto *func = new IrFuncDef(root, type, name, params);
     root->push_func(func);
 
     body->gen_ir(func);
@@ -121,10 +121,17 @@ void AstStmtAssignment::gen_ir(IrFuncDef *func) {
         generror("assignment lval got dim %d for var %s", lval->dim_left, lval->name.c_str());
 
     if(!lval->idxinfo->val.empty()) { // has array index
-        AstExp *idx = lval->def->initval.get_offset_bytes(lval->idxinfo, true);
-        RVal lidx = idx->gen_rval(func);
-        //outasm("%c%d [%s] = %s // assign", cdef(lval->def_or_null), lval->def_or_null->index, tlidx.eeyore_ref(), trval.eeyore_ref_local());
-        func->push_stmt(new IrArraySet(func, lval->def, lidx, val));
+        AstExp *off = lval->def->initval.get_offset_bytes(lval->idxinfo, true);
+
+        if(off->get_const().iserror) { // not constant index, do pointer calculation
+            RVal toff = off->gen_rval(func);
+            LVal ptr = func->gen_scalar_tempvar();
+            func->push_stmt(new IrOpBinary(func, ptr, lval->def, OpPlus, toff));
+            //outasm("%c%d [%s] = %s // assign", cdef(lval->def_or_null), lval->def_or_null->index, tlidx.eeyore_ref(), trval.eeyore_ref_local());
+            func->push_stmt(new IrArraySet(func, ptr, 0, val));
+        } else { // constant index
+            func->push_stmt(new IrArraySet(func, lval->def, off->get_const().val, val));
+        }
     } else { // plain value
         //outasm("%c%d = %s // assign", cdef(lval->def_or_null), lval->def_or_null->index, trval.eeyore_ref_local());
         func->push_stmt(new IrMov(func, lval->def, val));
@@ -223,12 +230,18 @@ RVal AstExpLVal::gen_rval(IrFuncDef *func) {
     }
 
     if(!def->idxinfo->val.empty()) { // array
-        AstExp *idx = def->initval.get_offset_bytes(idxinfo, false);
-        RVal tidx = idx->gen_rval(func);
-
         LVal tval = func->gen_scalar_tempvar();
-        //outasm("t%d = %c%d [%s] // lval - array", tval, cdef(def_or_null), def_or_null->index, tidx.eeyore_ref_local());
-        func->push_stmt(new IrArrayGet(func, tval, def, tidx));
+        AstExp *off = def->initval.get_offset_bytes(idxinfo, false);
+
+        if(off->get_const().iserror) { // not constant index, do pointer calculation
+            RVal toff = off->gen_rval(func);
+            LVal ptr = func->gen_scalar_tempvar();
+            func->push_stmt(new IrOpBinary(func, ptr, def, OpPlus, toff));
+            //outasm("t%d = %c%d [%s] // lval - array", tval, cdef(def_or_null), def_or_null->index, tidx.eeyore_ref_local());
+            func->push_stmt(new IrArrayGet(func, tval, ptr, 0));
+        } else { // constant index
+            func->push_stmt(new IrArrayGet(func, tval, def, off->get_const().val));
+        }
         return tval;
     } else { //primitive
         return def;

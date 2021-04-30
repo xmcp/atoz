@@ -200,17 +200,19 @@ void IrFuncDef::regalloc() {
 
         if(declpair.first->def_or_null->idxinfo->dims() > 0) {
             // map local array -> stack
+            auto totelems = declpair.first->dest.val.reference->initval.totelems;
             vreg_map.insert(make_pair(
                 reguid,
-                Vreg::asStack(declpair.first->dest.val.reference->initval.totelems)
+                Vreg::asStack(totelems, stacksize)
             ));
+            stacksize += totelems;
         }
     }
 
     vector<Preg> avail_regs;
 
-    // todo: spare some regs for spill
-    for(int t=0; t<=6; t++)
+    // t0 and t1 reserved for spilled register and assembler temporary
+    for(int t=2; t<=6; t++)
         avail_regs.push_back(Preg('t', t));
     for(int a=0; a<=7; a++)
         avail_regs.push_back(Preg('a', a));
@@ -235,8 +237,9 @@ void IrFuncDef::regalloc() {
 
             // map it onto stack
             auto it = decl_map.find(x); // local -> found, tempvar -> notfound
-            int arrsize = it==decl_map.end() ? 1 : it->second->initval.totelems;
-            vreg_map.insert(make_pair(x, Vreg::asStack(arrsize)));
+            int arrelems = it==decl_map.end() ? 1 : it->second->initval.totelems;
+            vreg_map.insert(make_pair(x, Vreg::asStack(arrelems, stacksize)));
+            stacksize += arrelems;
         }
     }
 
@@ -249,7 +252,7 @@ void IrFuncDef::regalloc() {
         vreg_map.insert(make_pair(x, reg));
     }
 
-    for(int i=0; i<args; i++) { // check args
+    for(int i=0; i<(int)params->val.size(); i++) { // check args
         int uid = REGUID_ARG_OFFSET + i;
         Preg shouldbe = Preg('a', i);
         auto it = vreg_map.find(uid);
