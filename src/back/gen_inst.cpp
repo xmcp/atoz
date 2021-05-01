@@ -123,62 +123,65 @@ void fn_dostore(LVal v, IrFuncDef *irfunc, InstFuncDef *instfunc) {
 #define rload(v, idx) fn_rload(v, idx, this->func, func)
 #define rstore(v) fn_rstore(v, this->func)
 #define dostore(v) fn_dostore(v, this->func, func)
-#define ignore_dest_unused(blk) do { \
-    try blk \
-    catch(DestNotUsed &e) {e.warn_user();} \
+#define unused(dest) ((dest).regpooled() && meet_pooled_vars.find((dest).reguid())==alive_pooled_vars.end())
+#define ret_if_unused(dest) do { \
+    if(unused(dest)) { \
+        DestNotUsed(dest, this->func->name).warn_user(); \
+        return; \
+    } \
 } while(0)
 
 void IrOpBinary::gen_inst(InstFuncDef *func) {
-    ignore_dest_unused({
-        if(operand1.type==RVal::Reference && operand1.val.reference->idxinfo->dims()>0) {
-            // pointer math, e.g. ptr = arr + idx
-            switch(operand1.val.reference->pos) {
-                case DefGlobal:
-                    func->push_stmt(new InstLoadAddrGlobal(tmpreg0, operand1.val.reference->index));
-                    func->push_stmt(new InstOpBinary(rstore(dest), tmpreg0, op, rload(operand2, 1)));
-                    break;
+    ret_if_unused(dest);
 
-                case DefLocal:
-                    assert(this->func->get_vreg(operand1).pos==Vreg::VregInStack);
-                    func->push_stmt(new InstLoadAddrStack(tmpreg0, this->func->get_vreg(operand1).spilloffset));
-                    func->push_stmt(new InstOpBinary(rstore(dest), tmpreg0, op, rload(operand2, 1)));
-                    break;
+    if(operand1.type==RVal::Reference && operand1.val.reference->idxinfo->dims()>0) {
+        // pointer math, e.g. ptr = arr + idx
+        switch(operand1.val.reference->pos) {
+            case DefGlobal:
+                func->push_stmt(new InstLoadAddrGlobal(tmpreg0, operand1.val.reference->index));
+                func->push_stmt(new InstOpBinary(rstore(dest), tmpreg0, op, rload(operand2, 1)));
+                break;
 
-                case DefArg:
-                    assert(this->func->get_vreg(operand1).pos==Vreg::VregInReg);
-                    func->push_stmt(new InstOpBinary(rstore(dest), this->func->get_vreg(operand1).reg, op, rload(operand2, 1)));
-                    break;
+            case DefLocal:
+                assert(this->func->get_vreg(operand1).pos==Vreg::VregInStack);
+                func->push_stmt(new InstLoadAddrStack(tmpreg0, this->func->get_vreg(operand1).spilloffset));
+                func->push_stmt(new InstOpBinary(rstore(dest), tmpreg0, op, rload(operand2, 1)));
+                break;
 
-                default:
-                    assert(false);
-            }
-        } else {
-            func->push_stmt(new InstOpBinary(rstore(dest), rload(operand1, 0), op, rload(operand2, 1)));
+            case DefArg:
+                assert(this->func->get_vreg(operand1).pos==Vreg::VregInReg);
+                func->push_stmt(new InstOpBinary(rstore(dest), this->func->get_vreg(operand1).reg, op, rload(operand2, 1)));
+                break;
+
+            default:
+                assert(false);
         }
-        dostore(dest);
-    });
+    } else {
+        func->push_stmt(new InstOpBinary(rstore(dest), rload(operand1, 0), op, rload(operand2, 1)));
+    }
+    dostore(dest);
 }
 
 void IrOpUnary::gen_inst(InstFuncDef *func) {
-    ignore_dest_unused({
-        func->push_stmt(new InstOpUnary(rstore(dest), op, rload(operand, 1)));
-        dostore(dest);
-    });
+    ret_if_unused(dest);
+
+    func->push_stmt(new InstOpUnary(rstore(dest), op, rload(operand, 1)));
+    dostore(dest);
 }
 
 void IrMov::gen_inst(InstFuncDef *func) {
-    ignore_dest_unused({
-        func->push_stmt(new InstMov(rstore(dest), rload(src, 1)));
-        dostore(dest);
-    });
+    ret_if_unused(dest);
+
+    func->push_stmt(new InstMov(rstore(dest), rload(src, 1)));
+    dostore(dest);
 }
 
 void IrArraySet::gen_inst(InstFuncDef *func) {
+    ret_if_unused(dest);
+
     if(dest.type==LVal::TempVar) {
-        ignore_dest_unused({
-            func->push_stmt(new InstArraySet(rstore(dest), doffset, rload(src, 1)));
-            dostore(dest);
-        });
+        func->push_stmt(new InstArraySet(rstore(dest), doffset, rload(src, 1)));
+        dostore(dest);
     } else { // reference
         switch(dest.val.reference->pos) {
             case DefGlobal:
@@ -204,33 +207,33 @@ void IrArraySet::gen_inst(InstFuncDef *func) {
 }
 
 void IrArrayGet::gen_inst(InstFuncDef *func) {
-    ignore_dest_unused({
-        if(src.type==RVal::TempVar) {
-            func->push_stmt(new InstArrayGet(rstore(dest), rload(src, 1), soffset));
-        } else { // reference
-            switch(src.val.reference->pos) {
-                case DefGlobal:
-                    func->push_stmt(new InstLoadAddrGlobal(tmpreg0, src.val.reference->index));
-                    func->push_stmt(new InstArrayGet(rstore(dest), tmpreg0, soffset));
-                    break;
+    ret_if_unused(dest);
 
-                case DefLocal:
-                    assert(this->func->get_vreg(src).pos==Vreg::VregInStack);
-                    func->push_stmt(new InstLoadAddrStack(tmpreg0, this->func->get_vreg(src).spilloffset));
-                    func->push_stmt(new InstArrayGet(rstore(dest), tmpreg0, soffset));
-                    break;
+    if(src.type==RVal::TempVar) {
+        func->push_stmt(new InstArrayGet(rstore(dest), rload(src, 1), soffset));
+    } else { // reference
+        switch(src.val.reference->pos) {
+            case DefGlobal:
+                func->push_stmt(new InstLoadAddrGlobal(tmpreg0, src.val.reference->index));
+                func->push_stmt(new InstArrayGet(rstore(dest), tmpreg0, soffset));
+                break;
 
-                case DefArg:
-                    assert(this->func->get_vreg(src).pos==Vreg::VregInReg);
-                    func->push_stmt(new InstArrayGet(rstore(dest), this->func->get_vreg(src).reg, soffset));
-                    break;
+            case DefLocal:
+                assert(this->func->get_vreg(src).pos==Vreg::VregInStack);
+                func->push_stmt(new InstLoadAddrStack(tmpreg0, this->func->get_vreg(src).spilloffset));
+                func->push_stmt(new InstArrayGet(rstore(dest), tmpreg0, soffset));
+                break;
 
-                default:
-                    assert(false);
-            }
+            case DefArg:
+                assert(this->func->get_vreg(src).pos==Vreg::VregInReg);
+                func->push_stmt(new InstArrayGet(rstore(dest), this->func->get_vreg(src).reg, soffset));
+                break;
+
+            default:
+                assert(false);
         }
-        dostore(dest);
-    });
+    }
+    dostore(dest);
 }
 
 void IrCondGoto::gen_inst(InstFuncDef *func) {
@@ -317,10 +320,10 @@ void IrCall::gen_inst(InstFuncDef *func) {
     auto saved_regs = gen_inst_common(func);
 
     // save retval
-    ignore_dest_unused({
+    if(!unused(ret)) {
         func->push_stmt(new InstMov(rstore(ret), Preg('a', 0)));
         dostore(ret);
-    });
+    }
 
     // restore saved regs, except the retval reg
     Vreg retreg = ret.regpooled() ? this->func->get_vreg(ret.reguid()) : Vreg(Preg('x', 0));

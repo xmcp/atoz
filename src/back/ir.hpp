@@ -257,6 +257,7 @@ struct IrStmt: Ir {
     // regalloc
     bool _regalloc_inqueue = false;
     unordered_set<int> alive_pooled_vars;
+    unordered_set<int> meet_pooled_vars;
 };
 
 #define push_if_pooled(x) do { \

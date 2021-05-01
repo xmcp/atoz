@@ -34,6 +34,8 @@ void propagate_alive_vars(IrFuncDef *func) {
             for(auto x: next->alive_pooled_vars)
                 meet.insert(x);
 
+        stmt->meet_pooled_vars = meet;
+
         for(auto def: stmt->defs())
             meet.erase(def);
         for(auto use: stmt->uses())
