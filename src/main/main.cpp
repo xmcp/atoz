@@ -67,6 +67,8 @@ void parse_oj_args(int argc, char **argv) {
 }
 
 int main(int argc, char **argv) {
+    bool skip_analyze = false;
+
     /// PREPARE
     parse_oj_args(argc, argv);
     yyrestart(oj_in);
@@ -84,26 +86,25 @@ int main(int argc, char **argv) {
     if(output_format==Eeyore) {
         OUTPUT_REGALLOC_PREFIX = false;
         OUTPUT_DEF_USE = false;
-        goto skip_analyze;
+        skip_analyze = true;
     }
 
     /// GEN CFG, REG ALLOC, CALC DESTROY SET
-    ir_root->install_builtin_destroy_sets();
-    for(const auto& funcpair: ir_root->funcs) {
-        auto func = funcpair.first;
-        func->connect_all_cfg();
-        func->regalloc();
-        func->report_destroyed_set();
+    if(!skip_analyze) {
+        ir_root->install_builtin_destroy_sets();
+        for(const auto& funcpair: ir_root->funcs) {
+            auto func = funcpair.first;
+            func->connect_all_cfg();
+            func->regalloc();
+            func->report_destroyed_set();
+        }
     }
 
-    skip_analyze:
-
+    /// GEN EEYORE AND OUTPUT
     if(output_format==Eeyore || output_format==AnalyzedEeyore) {
-        /// GEN EEYORE
         list<string> eey_buf;
         ir_root->output_eeyore(eey_buf);
 
-        /// OUTPUT
         for(const auto &s: eey_buf)
             fprintf(oj_out, "%s\n", s.c_str());
 
