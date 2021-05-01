@@ -234,7 +234,7 @@ void IrArrayGet::gen_inst(InstFuncDef *func) {
 }
 
 void IrCondGoto::gen_inst(InstFuncDef *func) {
-    func->push_stmt(new InstCondGoto(rload(operand1, 0), op, rload(operand1, 1), label));
+    func->push_stmt(new InstCondGoto(rload(operand1, 0), op, rload(operand2, 1), label));
 }
 
 void IrGoto::gen_inst(InstFuncDef *func) {
@@ -322,9 +322,13 @@ void IrCall::gen_inst(InstFuncDef *func) {
         dostore(ret);
     });
 
-    // restore saved regs
-    for(int i=0; i<(int)saved_regs.size(); i++)
+    // restore saved regs, except the retval reg
+    Vreg retreg = ret.regpooled() ? this->func->get_vreg(ret.reguid()) : Vreg(Preg('x', 0));
+    for(int i=0; i<(int)saved_regs.size(); i++) {
+        if(retreg.pos==Vreg::VregInReg && retreg.reg==saved_regs[i])
+            continue;
         saved_regs[i].caller_load_after(func, this->func->spillsize + i);
+    }
 }
 
 void IrReturnVoid::gen_inst(InstFuncDef *func) {
