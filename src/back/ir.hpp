@@ -188,7 +188,9 @@ struct IrFuncDef: IrDeclContainer {
 
     Vreg get_vreg(int reguid) {
         auto it = vreg_map.find(reguid);
-        assert(it!=vreg_map.end());
+        if(it==vreg_map.end()) {
+            assert(false);
+        }
         return it->second;
     }
     Vreg get_vreg(RVal val) {

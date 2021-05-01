@@ -7,22 +7,14 @@ using std::exception;
 
 const bool INST_GEN_COMMENTS = true;
 
-struct DestNotUsed: exception {
-    string funcname;
-    LVal v;
-
-    DestNotUsed(LVal v, string funcname):
-        funcname(funcname), v(v) {}
-
-    void warn_user() {
-        printf("warning: unused dest value ");
-        if(v.type==LVal::TempVar)
-            printf("{temp %d}", v.val.tempvar);
-        else // reference
-            printf("{ref %s}", v.val.reference->name.c_str());
-        printf(" in function %s\b", funcname.c_str());
-    }
-};
+void warn_dest_not_used(LVal v, string funcname) {
+    printf("warning: unused dest value ");
+    if(v.type==LVal::TempVar)
+        printf("{temp %d}", v.val.tempvar);
+    else // reference
+        printf("{ref %s}", v.val.reference->name.c_str());
+    printf(" in function %s\b", funcname.c_str());
+}
 
 const Preg tmpreg0 = Preg('t', 0);
 const Preg tmpreg1 = Preg('t', 1);
@@ -114,8 +106,6 @@ Preg fn_rload(RVal v, int idx, IrFuncDef *irfunc, InstFuncDef *instfunc) {
 Preg fn_rstore(LVal v, IrFuncDef *irfunc) {
     if(v.type==LVal::Reference && v.val.reference->pos==DefGlobal) { // ref global
         return tmpreg0;
-    } else if(irfunc->vreg_map.find(v.reguid())==irfunc->vreg_map.end()) { // not vregged
-        throw DestNotUsed(v, irfunc->name);
     } else { // vregged
         return irfunc->get_vreg(v).get_stored_preg();
     }
@@ -136,7 +126,7 @@ void fn_dostore(LVal v, IrFuncDef *irfunc, InstFuncDef *instfunc) {
 #define unused(dest) ((dest).regpooled() && meet_pooled_vars.find((dest).reguid())==alive_pooled_vars.end())
 #define ret_if_unused(dest) do { \
     if(unused(dest)) { \
-        DestNotUsed(dest, this->func->name).warn_user(); \
+        warn_dest_not_used(dest, this->func->name); \
         return; \
     } \
 } while(0)
@@ -324,16 +314,16 @@ void IrCallVoid::gen_inst(InstFuncDef *func) {
 }
 
 void IrCall::gen_inst(InstFuncDef *func) {
-    auto saved_regs = gen_inst_common(func);
+    auto saved_regs = gen_inst_common(func); // up to `call`
 
-    // save retval
-    if(!unused(ret)) {
+    Vreg retreg = Vreg(Preg('x', 0));
+    if(!unused(ret)) { // save retval
         func->push_stmt(new InstMov(rstore(ret), Preg('a', 0)));
         dostore(ret);
+        retreg = ret.regpooled() ? this->func->get_vreg(ret.reguid()) : Vreg(Preg('x', 0));
     }
 
     // restore saved regs, except the retval reg
-    Vreg retreg = ret.regpooled() ? this->func->get_vreg(ret.reguid()) : Vreg(Preg('x', 0));
     for(int i=0; i<(int)saved_regs.size(); i++) {
         if(retreg.pos==Vreg::VregInReg && retreg.reg==saved_regs[i])
             continue;
