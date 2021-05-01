@@ -14,6 +14,8 @@ using std::string;
 extern int yylineno;
 extern int atoz_yycol;
 
+#define istype(ptr, cls) (dynamic_cast<cls*>(ptr)!=nullptr)
+
 ///// FORWARD DECL
 
 struct Ast;
@@ -183,6 +185,8 @@ struct AstFuncDefParams: Ast {
 
 struct AstFuncUseParams: Ast {
     vector<AstExp*> val;
+
+    vector<IrParam*> generated_irs;
 
     AstFuncUseParams() {}
     void push_val(AstExp *next) {

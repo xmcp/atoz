@@ -92,31 +92,39 @@ void AstFuncDef::gen_ir(IrRoot *root) {
 }
 
 void AstFuncUseParams::gen_ir(IrFuncDef *func) {
+    vector<RVal> gen_params;
     for(auto *param: val) {
-        auto *lval = dynamic_cast<AstExpLVal*>(param);
+        auto *lval = dynamic_cast<AstExpLVal*>(param); // maybe it is an array
+
         if(lval && lval->dim_left>0) { // pass array as pointer
             AstExp *idx = lval->def->initval.get_offset_bytes(lval->idxinfo, true);
             RVal tidx = idx->gen_rval(func);
             LVal trval = func->gen_scalar_tempvar();
+
             //outasm("t%d = %c%d + %s // useparam - array access", trval, cdef(lval->def_or_null), lval->def_or_null->index, tidx.eeyore_ref_local());
             func->push_stmt(new IrOpBinary(func, trval, lval->def, OpPlus, tidx), "param array access");
             //outasm("param t%d // useparam - array pass", trval);
-            func->push_stmt(new IrParam(func, trval));
+            gen_params.push_back(trval);
+
         } else { // pass primitive
             RVal trval = param->gen_rval(func);
-            //outasm("param %s // useparam - primitive", trval.eeyore_ref_local());
-            func->push_stmt(new IrParam(func, trval));
+            gen_params.push_back(trval);
         }
+    }
+
+    for(int i=0; i<(int)gen_params.size(); i++) {
+        auto ir = new IrParam(func, i, gen_params[i]);
+        generated_irs.push_back(ir);
+        func->push_stmt(ir);
     }
 }
 
 void AstBlock::gen_ir(IrFuncDef *func) {
-    for(auto *sub: body) {// Decl, Stmt
+    for(auto *sub: body) { // Decl, Stmt
         if(istype(sub, AstStmt))
-            ((AstStmt *) sub)->gen_ir(func);
-        else { // Decl handled in funcdef
-            ((AstDecl *) sub)->gen_ir_local(func);
-        }
+            ((AstStmt*)sub)->gen_ir(func);
+        else
+            ((AstDecl*)sub)->gen_ir_local(func);
     }
 }
 
@@ -259,32 +267,46 @@ RVal AstExpLiteral::gen_rval(IrFuncDef *func) {
 }
 
 RVal AstExpFunctionCall::gen_rval(IrFuncDef *func) {
-    params->gen_ir(func);
-
     // special functions
     if(name=="starttime") {
-        //outasm("param %d // func call special", loc.lineno);
-        func->push_stmt(new IrParam(func, RVal::asConstExp(loc.lineno)), "func call special");
-        //outasm("call f__sysy_starttime // func call special");
-        func->push_stmt(new IrCallVoid(func, "_sysy_starttime"));
+        auto param_stmt = new IrParam(func, 0, RVal::asConstExp(loc.lineno));
+        func->push_stmt(param_stmt);
+
+        auto call_stmt = new IrCallVoid(func, "_sysy_starttime");
+        call_stmt->params.push_back(param_stmt);
+        func->push_stmt(call_stmt);
+
         return RVal::asTempVar(-1);
     }
     if(name=="stoptime") {
-        //outasm("param %d // func call special", loc.lineno);
-        func->push_stmt(new IrParam(func, RVal::asConstExp(loc.lineno)), "func call special");
-        //outasm("call f__sysy_stoptime // func call special");
-        func->push_stmt(new IrCallVoid(func, "_sysy_stoptime"));
+        auto param_stmt = new IrParam(func, 0, RVal::asConstExp(loc.lineno));
+        func->push_stmt(param_stmt);
+
+        auto call_stmt = new IrCallVoid(func, "_sysy_stoptime");
+        call_stmt->params.push_back(param_stmt);
+        func->push_stmt(call_stmt);
+
         return RVal::asTempVar(-1);
     }
 
     if(def->type==FuncVoid) {
-        //outasm("call f_%s", name.c_str());
-        func->push_stmt(new IrCallVoid(func, name));
+        auto call_stmt = new IrCallVoid(func, name);
+
+        params->gen_ir(func);
+        for(auto ir: params->generated_irs)
+            call_stmt->params.push_back(ir);
+
+        func->push_stmt(call_stmt);
         return RVal::asTempVar(-1);
     } else {
         LVal tret = func->gen_scalar_tempvar();
-        //outasm("t%d = call f_%s", tret, name.c_str());
-        func->push_stmt(new IrCall(func, tret, name));
+        auto call_stmt = new IrCall(func, tret, name);
+
+        params->gen_ir(func);
+        for(auto ir: params->generated_irs)
+            call_stmt->params.push_back(ir);
+
+        func->push_stmt(call_stmt);
         return tret;
     }
 }

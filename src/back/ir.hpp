@@ -123,7 +123,7 @@ struct IrDecl: Ir {
         def_or_null(nullptr), dest(LVal::asTempVar(tempvar)) {}
 
     void output_eeyore(list<string> &buf);
-    void gen_inst(InstRoot *root);
+    void gen_inst_global(InstRoot *root);
 };
 
 struct IrInit: Ir {
@@ -138,7 +138,7 @@ struct IrInit: Ir {
         dest(def), def(def), offset_bytes(idx*4), val(val) {}
 
     void output_eeyore(list<string> &buf);
-    void gen_inst(InstRoot *root);
+    void gen_inst_global(InstRoot *root);
 };
 
 struct IrDeclContainer: Ir {
@@ -186,6 +186,15 @@ struct IrFuncDef: IrDeclContainer {
     unordered_map<int, Vreg> vreg_map; // def uid -> vreg
     unordered_map<int, AstDef*> decl_map; // def uid -> def node
 
+    Vreg get_vreg(int reguid) {
+        auto it = vreg_map.find(reguid);
+        assert(it!=vreg_map.end());
+        return it->second;
+    }
+    Vreg get_vreg(RVal val) {
+        return get_vreg(val.reguid());
+    }
+
     void connect_all_cfg();
     void regalloc();
     void report_destroyed_set();
@@ -217,6 +226,12 @@ struct IrRoot: IrDeclContainer {
         return tempvar_top++;
     }
 
+    unordered_set<Preg, Preg::Hash> get_destroy_set(string name) {
+        auto it = destroy_sets.find(name);
+        assert(it!=destroy_sets.end());
+        return it->second;
+    }
+
     void output_eeyore(list<string> &buf);
     void gen_inst(InstRoot *root);
 
@@ -241,7 +256,7 @@ struct IrStmt: Ir {
 
     // regalloc
     bool _regalloc_inqueue = false;
-    unordered_set<int> alive_vars;
+    unordered_set<int> alive_pooled_vars;
 };
 
 #define push_if_pooled(x) do { \
@@ -430,15 +445,18 @@ struct IrLabel: IrStmt {
 
 struct IrParam: IrStmt {
     RVal param;
+    int pidx;
 
-    IrParam(IrFuncDef *func, RVal param): IrStmt(func),
-        param(param) {}
+    IrParam(IrFuncDef *func, int pidx, RVal param): IrStmt(func),
+        pidx(pidx), param(param) {}
 
-    void output_eeyore(list<string> &buf) override;
-    void gen_inst(InstFuncDef *func) override;
+    void output_eeyore(list<string> &buf) override {}
+    void output_eeyore_handled_by_call(list<string> &buf);
+    void gen_inst(InstFuncDef *func) override {}
+    void gen_inst_handled_by_call(InstFuncDef *func);
 
     // cfg
-    vector<int> uses() override {
+    vector<int> uses_handled_by_call() {
         auto v = vector<int>();
         push_if_pooled(param);
         return v;
@@ -448,19 +466,31 @@ struct IrParam: IrStmt {
 struct IrCallVoid: IrStmt {
     string name;
 
+    // in gen ir phase
+    vector<IrParam*> params;
+
     IrCallVoid(IrFuncDef *func, string fn): IrStmt(func),
-        name(fn) {}
+        name(fn), params({}) {}
 
     void output_eeyore(list<string> &buf) override;
+    vector<Preg> gen_inst_common(InstFuncDef *func);
     void gen_inst(InstFuncDef *func) override;
+
+    // cfg
+    vector<int> uses() override {
+        auto v = vector<int>();
+        for(auto param: params)
+            for(auto u: param->uses_handled_by_call())
+                    v.push_back(u);
+        return v;
+    }
 };
 
-struct IrCall: IrStmt {
-    string name;
+struct IrCall: IrCallVoid {
     LVal ret;
 
-    IrCall(IrFuncDef *func, LVal ret, string fn): IrStmt(func),
-        ret(ret), name(fn) {}
+    IrCall(IrFuncDef *func, LVal ret, string fn): IrCallVoid(func, fn),
+        ret(ret) {}
 
     void output_eeyore(list<string> &buf) override;
     void gen_inst(InstFuncDef *func) override;

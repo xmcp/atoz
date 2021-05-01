@@ -2,7 +2,9 @@
 #include "../front/ast.hpp"
 
 #include <algorithm>
+#include <unordered_set>
 using std::max;
+using std::unordered_set;
 
 #define istype(ptr, cls) (dynamic_cast<cls*>(ptr)!=nullptr)
 
@@ -108,6 +110,10 @@ void IrFuncDef::report_destroyed_set() {
         if(vregpair.second.pos==Vreg::VregInReg)
             destory_set.insert(vregpair.second.reg);
 
+    // destroyed because caller will pass param
+    for(int i=0; i<(int)params->val.size(); i++)
+        destory_set.insert(Preg('a', i));
+
     // insert it first, therefore we can get it if the function recurses
     root->destroy_sets.insert(make_pair(name, destory_set));
 
@@ -122,18 +128,19 @@ void IrFuncDef::report_destroyed_set() {
         if(!funcname.empty()) {
             // update destroy set
 
-            auto it = root->destroy_sets.find(funcname);
-            assert(it!=root->destroy_sets.end());
-
-            for(auto var: it->second)
+            auto subfn_destroyset = root->get_destroy_set(funcname);
+            for(auto var: subfn_destroyset)
                 destory_set.insert(var);
 
             // update caller save size
             int workingset = 0;
-            for(auto uid: stmtpair.first->alive_vars) {
+            for(auto uid: stmtpair.first->alive_pooled_vars) {
                 auto vit = vreg_map.find(uid);
-                if(vit!=vreg_map.end() && vit->second.pos==Vreg::VregInReg)
-                    workingset++;
+                if(vit!=vreg_map.end() && vit->second.pos==Vreg::VregInReg) { // for current working set
+                    auto wsreg = vit->second.reg;
+                    if(subfn_destroyset.find(wsreg)!=subfn_destroyset.end()) // destoryed by subfn
+                        workingset++;
+                }
             }
             callersavesize = max(callersavesize, workingset);
         }

@@ -8,7 +8,7 @@ using std::stringstream;
 #include "ast.hpp"
 
 const bool EEYORE_GEN_COMMENTS = true;
-bool OUTPUT_REGALLOC_PREFIX = false;
+bool OUTPUT_REGALLOC_PREFIX = true;
 bool OUTPUT_DEF_USE = true;
 const int EEYORE_INST_BUFSIZE = 512;
 
@@ -32,7 +32,7 @@ string RVal::eeyore_ref_local(IrFuncDef *func) {
             if(it==func->vreg_map.end())
                 pfx = "{???}";
             else
-                pfx = it->second.tigger_ref();
+                pfx = it->second.analyzed_eeyore_ref();
         }
     }
 
@@ -69,7 +69,7 @@ string LVal::eeyore_ref_local(IrFuncDef *func) {
             if(it==func->vreg_map.end())
                 pfx = "{???}";
             else
-                pfx = it->second.tigger_ref();
+                pfx = it->second.analyzed_eeyore_ref();
         }
     }
 
@@ -98,6 +98,36 @@ string LVal::eeyore_ref_local(IrFuncDef *func) {
 } while(0)
 
 #define eey(v) ((v).eeyore_ref_local(func).c_str())
+
+void IrRoot::output_eeyore(list<string> &buf) {
+    outasm("// BEGIN EEYORE");
+
+    outasm("//--- GLOBAL DECL");
+    for(const auto& decl: decls) {
+        decl.first->output_eeyore(buf);
+        if(EEYORE_GEN_COMMENTS && !decl.second.empty())
+            outcomment("global: %s", decl.second.c_str());
+    }
+
+    outasm("");
+    outasm("//--- GLOBAL INIT");
+    for(auto init: inits) {
+        init.first->output_eeyore(buf);
+        if(EEYORE_GEN_COMMENTS && !init.second.empty())
+            outcomment("init: %s", init.second.c_str());
+    }
+
+    outasm("");
+    outasm("//--- FUNCTIONS");
+    for(auto func: funcs) {
+        func.first->output_eeyore(buf);
+        if(EEYORE_GEN_COMMENTS && !func.second.empty())
+            outcomment("func: %s", func.second.c_str());
+        outasm("");
+    }
+
+    outasm("// END EEYORE");
+}
 
 void IrDecl::output_eeyore(list<string> &buf) {
     if(def_or_null!=nullptr && def_or_null->idxinfo->dims() > 0) // array var
@@ -139,43 +169,13 @@ void IrFuncDef::output_eeyore(list<string> &buf) {
             for(int use: stmt.first->uses())
                 ss << demystify_reguid(use) << ' ';
             ss << "| ALIVE: ";
-            for(int alive: stmt.first->alive_vars)
+            for(int alive: stmt.first->alive_pooled_vars)
                 ss << demystify_reguid(alive) << ' ';
             outcomment("%s", ss.str().c_str());
         }
     }
 
     outasm("end f_%s", name.c_str());
-}
-
-void IrRoot::output_eeyore(list<string> &buf) {
-    outasm("// BEGIN EEYORE");
-
-    outasm("//--- GLOBAL DECL");
-    for(const auto& decl: decls) {
-        decl.first->output_eeyore(buf);
-        if(EEYORE_GEN_COMMENTS && !decl.second.empty())
-            outcomment("global: %s", decl.second.c_str());
-    }
-
-    outasm("");
-    outasm("//--- GLOBAL INIT");
-    for(auto init: inits) {
-        init.first->output_eeyore(buf);
-        if(EEYORE_GEN_COMMENTS && !init.second.empty())
-            outcomment("init: %s", init.second.c_str());
-    }
-
-    outasm("");
-    outasm("//--- FUNCTIONS");
-    for(auto func: funcs) {
-        func.first->output_eeyore(buf);
-        if(EEYORE_GEN_COMMENTS && !func.second.empty())
-            outcomment("func: %s", func.second.c_str());
-        outasm("");
-    }
-
-    outasm("// END EEYORE");
 }
 
 void IrOpBinary::output_eeyore(list<string> &buf) {
@@ -210,15 +210,20 @@ void IrLabel::output_eeyore(list<string> &buf) {
     outstmt("l%d:", label);
 }
 
-void IrParam::output_eeyore(list<string> &buf) {
+void IrParam::output_eeyore_handled_by_call(list<string> &buf) {
     outstmt("param %s", eey(param));
+    outcomment("#%d", pidx);
 }
 
 void IrCallVoid::output_eeyore(list<string> &buf) {
+    for(auto param: params)
+        param->output_eeyore_handled_by_call(buf);
     outstmt("call f_%s", name.c_str());
 }
 
 void IrCall::output_eeyore(list<string> &buf) {
+    for(auto param: params)
+        param->output_eeyore_handled_by_call(buf);
     outstmt("%s = call f_%s", eey(ret), name.c_str());
 }
 

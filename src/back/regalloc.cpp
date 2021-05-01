@@ -3,8 +3,10 @@
 
 #include <queue>
 #include <stack>
+#include <unordered_set>
 using std::queue;
 using std::stack;
+using std::unordered_set;
 
 void clear_inqueue(IrFuncDef *func) {
     for(const auto& stmtpair: func->stmts)
@@ -29,7 +31,7 @@ void propagate_alive_vars(IrFuncDef *func) {
 
         unordered_set<int> meet;
         for(auto next: stmt->next)
-            for(auto x: next->alive_vars)
+            for(auto x: next->alive_pooled_vars)
                 meet.insert(x);
 
         for(auto def: stmt->defs())
@@ -37,8 +39,8 @@ void propagate_alive_vars(IrFuncDef *func) {
         for(auto use: stmt->uses())
             meet.insert(use);
 
-        if(stmt->alive_vars != meet) { // update alive vars
-            stmt->alive_vars = meet;
+        if(stmt->alive_pooled_vars != meet) { // update alive vars
+            stmt->alive_pooled_vars = meet;
             for(auto prev: stmt->prev)
                 if(!prev->_regalloc_inqueue) {
                     prev->_regalloc_inqueue = true;
@@ -131,12 +133,12 @@ CorrGraph collect_correlation(IrFuncDef *func) {
         IrStmt *stmt = q.front();
         q.pop();
 
-        for(auto var: stmt->alive_vars)
+        for(auto var: stmt->alive_pooled_vars)
             graph.addnode(var);
 
-        for(auto it = stmt->alive_vars.cbegin(); it != stmt->alive_vars.end(); it++) {
+        for(auto it = stmt->alive_pooled_vars.cbegin(); it != stmt->alive_pooled_vars.end(); it++) {
             auto it2 = it;
-            for(it2++; it2!=stmt->alive_vars.end(); it2++)
+            for(it2++; it2!=stmt->alive_pooled_vars.end(); it2++)
                 graph.addedge(*it, *it2);
         }
 
@@ -152,9 +154,13 @@ CorrGraph collect_correlation(IrFuncDef *func) {
         if(!it->first->_regalloc_inqueue) {
             list<string> buf;
             it->first->output_eeyore(buf);
-            printf("info: removed unused stmt in %s:\n", func->name.c_str());
-            for(const auto &line: buf)
-                printf("  > %s\n", line.c_str());
+
+            // output info
+            if(!istype(it->first, IrReturn)) {
+                printf("warning: removed unreachable stmt in %s:\n", func->name.c_str());
+                for(const auto &line: buf)
+                    printf("  > %s\n", line.c_str());
+            }
 
             it = func->stmts.erase(it);
         }
@@ -167,7 +173,7 @@ CorrGraph collect_correlation(IrFuncDef *func) {
 
 int get_sacrificed_node(CorrGraph graph) {
     for(auto x: graph.nodes) {
-        if(x>=REGUID_ARG_OFFSET) // never spill args
+        if(x>=REGUID_ARG_OFFSET) // never spilloffset args
             continue;
 
         // todo: add heuristic here
@@ -191,13 +197,26 @@ Preg choose_reg(CorrGraph graph, int x, vector<Preg> avail_regs, const unordered
 }
 
 void swap_preg(Preg a, Preg b, unordered_map<int, Vreg> &vreg_map) {
-    for(auto it: vreg_map)
+    for(auto &it: vreg_map)
         if(it.second.pos==Vreg::VregInReg) {
             if(it.second.reg==a)
                 it.second.reg = b;
             else if(it.second.reg==b)
                 it.second.reg = a;
         }
+}
+
+void check_alloc_does_not_conflict(IrFuncDef *func) {
+    for(const auto& stmt: func->stmts) { // for each stmt
+        unordered_set<Vreg, Vreg::Hash> workingset;
+
+        for(auto uid: stmt.first->alive_pooled_vars) { // assert alive vars do not map to same vreg
+            Vreg reg = func->get_vreg(uid);
+            assert(workingset.find(reg)==workingset.end());
+
+            workingset.insert(reg);
+        }
+    }
 }
 
 void IrFuncDef::regalloc() {
@@ -268,6 +287,8 @@ void IrFuncDef::regalloc() {
         Preg reg = choose_reg(graph, x, avail_regs, vreg_map);
         vreg_map.insert(make_pair(x, reg));
     }
+
+    check_alloc_does_not_conflict(this);
 
     for(int i=0; i<(int)params->val.size(); i++) { // check args
         int uid = REGUID_ARG_OFFSET + i;

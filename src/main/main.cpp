@@ -3,6 +3,8 @@
 using namespace std;
 
 #include "gc.hpp"
+#include "../back/inst.hpp"
+#include "../back/ir.hpp"
 #include "../front/ast.hpp"
 
 extern int yyparse();
@@ -32,7 +34,7 @@ FILE *openyyfile(string fn) {
 FILE *oj_in, *oj_out;
 
 enum OutputFormat {
-    Eeyore, AnalyzedEeyore, Tigger, Asm
+    Eeyore, AnalyzedEeyore, Tigger, Assembly
 } output_format;
 
 void parse_oj_args(int argc, char **argv) {
@@ -62,12 +64,19 @@ void parse_oj_args(int argc, char **argv) {
         case 'e': output_format = Eeyore; break;
         case 'a': output_format = AnalyzedEeyore; break;
         case 't': output_format = Tigger; break;
-        case 'm': output_format = Asm; break;
+        case 'm': output_format = Assembly; break;
     }
+}
+
+void cleanup() {
+    fclose(oj_in);
+    fclose(oj_out);
+    GarbageCollectable::delete_all();
 }
 
 int main(int argc, char **argv) {
     bool skip_analyze = false;
+    list<string> output_buf;
 
     /// PREPARE
     parse_oj_args(argc, argv);
@@ -102,23 +111,30 @@ int main(int argc, char **argv) {
 
     /// GEN EEYORE AND OUTPUT
     if(output_format==Eeyore || output_format==AnalyzedEeyore) {
-        list<string> eey_buf;
-        ir_root->output_eeyore(eey_buf);
+        ir_root->output_eeyore(output_buf);
 
-        for(const auto &s: eey_buf)
+        for(const auto &s: output_buf)
             fprintf(oj_out, "%s\n", s.c_str());
 
-        goto cleanup;
+        cleanup();
+        return 0;
     }
 
-    mainerror("tigger and asm not implemented");
+    auto *inst_root = new InstRoot();
+    ir_root->gen_inst(inst_root);
 
-    cleanup:
+    if(output_format==Tigger) {
+        inst_root->output_tigger(output_buf);
 
-    /// CLEANUP
-    fclose(oj_in);
-    fclose(oj_out);
-    GarbageCollectable::delete_all();
+        for(const auto &s: output_buf)
+            fprintf(oj_out, "%s\n", s.c_str());
 
+        cleanup();
+        return 0;
+    }
+
+    mainerror("asm not implemented");
+
+    cleanup();
     return 0;
 }

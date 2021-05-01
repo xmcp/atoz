@@ -1,16 +1,20 @@
 #pragma once
 
 #include <cassert>
+#include <string>
+using std::string;
 
 /*
 
-POOLED: tempvar
-POOLED(=REG): ref param
-POOLED: ref local scalar
-=STK: ref local array
+VREG+POOLED: tempvar
+VREG+POOLED(=REG): ref param
+VREG+POOLED: ref local scalar
+VREG(=STK): ref local array
 =GLB: ref global
 
 */
+
+struct InstFuncDef;
 
 struct Preg {
     char cat;
@@ -42,11 +46,19 @@ struct Preg {
         }
     };
 
-    string tigger_ref() {
+    string analyzed_eeyore_ref() {
         char buf[16];
         sprintf(buf, "{reg: %c%d}", cat, index);
         return string(buf);
     }
+    string tigger_ref() {
+        char buf[16];
+        sprintf(buf, "%c%d", cat, index);
+        return string(buf);
+    }
+
+    void caller_save_before(InstFuncDef *func, int stackoffset);
+    void caller_load_after(InstFuncDef *func, int stackoffset);
 };
 
 struct Vreg {
@@ -54,17 +66,17 @@ struct Vreg {
         VregInStack, VregInReg
     } pos;
 
-    int stackspan;
-    int stackoffset;
+    int spillspan;
+    int spilloffset;
     Preg reg;
 
 private:
     Vreg(bool instack):
-        pos(instack ? VregInStack : VregInReg), stackspan(0), stackoffset(-1), reg('x', 0) {}
+            pos(instack ? VregInStack : VregInReg), spillspan(0), spilloffset(-1), reg('x', 0) {}
 
 public:
     Vreg(Preg reg):
-        pos(VregInReg), stackspan(0), stackoffset(-1), reg(reg) {}
+            pos(VregInReg), spillspan(0), spilloffset(-1), reg(reg) {}
     static Vreg asReg(char cat, int index) {
         return {Preg(cat, index)};
     }
@@ -72,21 +84,47 @@ public:
         Vreg ret = Vreg(true);
         assert(elems>0);
         assert(offset>=0);
-        ret.stackspan = elems;
-        ret.stackoffset = offset;
+        ret.spillspan = elems;
+        ret.spilloffset = offset;
         return ret;
     }
 
-    string tigger_ref() {
+    bool operator==(const Vreg &rhs) const {
+        return (
+            pos==rhs.pos &&
+            (pos==VregInReg ?
+                reg==rhs.reg :
+                (spilloffset==rhs.spilloffset)
+            )
+        );
+    }
+    bool operator!=(const Vreg &rhs) const {
+        return !(rhs == *this);
+    }
+    struct Hash {
+        size_t operator()(const Vreg &v) const {
+            if(v.pos==VregInReg)
+                return Preg::Hash()(v.reg);
+            else
+                return -v.spilloffset;
+        }
+    };
+
+    string analyzed_eeyore_ref() {
         if(pos==VregInReg)
-            return reg.tigger_ref();
+            return reg.analyzed_eeyore_ref();
         else {
             char buf[16];
-            if(stackspan==1)
-                sprintf(buf, "{stk #%d}", stackoffset);
+            if(spillspan == 1)
+                sprintf(buf, "{stk #%d}", spilloffset);
             else
-                sprintf(buf, "{stk #%d +%d}", stackoffset, stackspan);
+                sprintf(buf, "{stk #%d +%d}", spilloffset, spillspan);
             return string(buf);
         }
     }
+
+    // spill
+    Preg load_into_preg(InstFuncDef *func, int tempreg);
+    Preg get_stored_preg();
+    void store_onto_stack_if_needed(InstFuncDef *func);
 };
