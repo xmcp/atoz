@@ -5,6 +5,8 @@
 #include <exception>
 using std::exception;
 
+const bool INST_GEN_COMMENTS = true;
+
 struct DestNotUsed: exception {
     string funcname;
     LVal v;
@@ -83,8 +85,16 @@ void IrFuncDef::gen_inst(InstRoot *root) {
     if(name=="main")
         root->mainfunc = func;
 
-    for(auto stmtpair: stmts)
+    for(auto stmtpair: stmts) {
+        if(INST_GEN_COMMENTS) {
+            func->push_stmt(new InstComment(""));
+            list<string> cmt_buf;
+            stmtpair.first->output_eeyore(cmt_buf);
+            for(const auto& line: cmt_buf)
+                func->push_stmt(new InstComment(line));
+        }
         stmtpair.first->gen_inst(func);
+    }
 }
 
 
@@ -177,11 +187,8 @@ void IrMov::gen_inst(InstFuncDef *func) {
 }
 
 void IrArraySet::gen_inst(InstFuncDef *func) {
-    ret_if_unused(dest);
-
     if(dest.type==LVal::TempVar) {
-        func->push_stmt(new InstArraySet(rstore(dest), doffset, rload(src, 1)));
-        dostore(dest);
+        func->push_stmt(new InstArraySet(rload(dest, 0), doffset, rload(src, 1)));
     } else { // reference
         switch(dest.val.reference->pos) {
             case DefGlobal:

@@ -171,7 +171,10 @@ void IrFuncDef::output_eeyore(list<string> &buf) {
             ss << "| ALIVE: ";
             for(int alive: stmt.first->alive_pooled_vars)
                 ss << demystify_reguid(alive) << ' ';
-            outcomment("%s", ss.str().c_str());
+            ss << "| MEET: ";
+            for(int meet: stmt.first->meet_pooled_vars)
+                ss << demystify_reguid(meet) << ' ';
+            outcomment("\n//    ____  %s", ss.str().c_str());
         }
     }
 

@@ -252,3 +252,12 @@ struct InstLoadAddrGlobal: InstStmt {
 
     void output_tigger(list<string> &buf) override;
 };
+
+struct InstComment: InstStmt {
+    string comment;
+
+    InstComment(string comment):
+        comment(comment) {}
+
+    void output_tigger(list<string> &buf) override;
+};

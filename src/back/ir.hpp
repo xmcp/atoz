@@ -352,14 +352,9 @@ struct IrArraySet: IrStmt {
     void gen_inst(InstFuncDef *func) override;
 
     // cfg
-    vector<int> defs() override {
-        auto v = vector<int>();
-        push_if_pooled(dest);
-        return v;
-    }
     vector<int> uses() override {
         auto v = vector<int>();
-        push_if_pooled(dest); // the ptr to array is read
+        push_if_pooled(dest);
         push_if_pooled(src);
         return v;
     }

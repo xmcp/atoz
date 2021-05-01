@@ -118,5 +118,13 @@ void InstLoadAddrGlobal::output_tigger(list<string> &buf) {
     outstmt("loadaddr v%d %s", globalidx, tig(dest));
 }
 
+void InstComment::output_tigger(list<string> &buf) {
+    if(comment.empty())
+        outasm("");
+    else
+        outasm("// %s", comment.c_str());
+}
+
 #undef tig
 #undef outasm
+
