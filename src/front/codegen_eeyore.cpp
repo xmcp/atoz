@@ -8,8 +8,8 @@ using std::stringstream;
 #include "ast.hpp"
 
 const bool EEYORE_GEN_COMMENTS = true;
-const bool OUTPUT_REGALLOC_PREFIX = false;
-const bool OUTPUT_DEF_USE = true;
+bool OUTPUT_REGALLOC_PREFIX = false;
+bool OUTPUT_DEF_USE = true;
 const int EEYORE_INST_BUFSIZE = 512;
 
 static char instbuf[EEYORE_INST_BUFSIZE];

@@ -7,6 +7,9 @@ using namespace std;
 extern int yyparse();
 extern void yyrestart(FILE*);
 
+extern bool OUTPUT_REGALLOC_PREFIX;
+extern bool OUTPUT_DEF_USE;
+
 #define mainerror(...) do { \
     printf("main error: "); \
     printf(__VA_ARGS__ ); \
@@ -27,6 +30,10 @@ FILE *openyyfile(string fn) {
 
 FILE *oj_in, *oj_out;
 
+enum OutputFormat {
+    Eeyore, AnalyzedEeyore, Tigger, Asm
+} output_format;
+
 void parse_oj_args(int argc, char **argv) {
     if(argc==5) { // to asm
         char **new_argv = new char*[6];
@@ -44,11 +51,18 @@ void parse_oj_args(int argc, char **argv) {
 
     if(argc!=6)
         mainerror("argc count is %d", argc);
-    if(strcmp(argv[1], "-S")!=0 || strcmp(argv[2], "-e")!=0 || strcmp(argv[4], "-o")!=0)
+    if(strcmp(argv[1], "-S")!=0 || strlen(argv[2])!=2 || argv[2][0]!='-' || strcmp(argv[4], "-o")!=0)
         mainerror("argv error");
     
     oj_in = fopen(argv[3], "r");
     oj_out = fopen(argv[5], "w");
+
+    switch(argv[2][1]) {
+        case 'e': output_format = Eeyore; break;
+        case 'a': output_format = AnalyzedEeyore; break;
+        case 't': output_format = Tigger; break;
+        case 'm': output_format = Asm; break;
+    }
 }
 
 int main(int argc, char **argv) {
@@ -66,6 +80,12 @@ int main(int argc, char **argv) {
     auto *ir_root = new IrRoot();
     ast_root->gen_ir(ir_root);
 
+    if(output_format==Eeyore) {
+        OUTPUT_REGALLOC_PREFIX = false;
+        OUTPUT_DEF_USE = false;
+        goto skip_analyze;
+    }
+
     /// GEN CFG, REG ALLOC, CALC DESTROY SET
     ir_root->install_builtin_destroy_sets();
     for(const auto& funcpair: ir_root->funcs) {
@@ -75,13 +95,23 @@ int main(int argc, char **argv) {
         func->report_destroyed_set();
     }
 
-    /// GEN EEYORE
-    list<string> eey_buf;
-    ir_root->output_eeyore(eey_buf);
+    skip_analyze:
 
-    /// OUTPUT
-    for(const auto &s: eey_buf)
-        fprintf(oj_out, "%s\n", s.c_str());
+    if(output_format==Eeyore || output_format==AnalyzedEeyore) {
+        /// GEN EEYORE
+        list<string> eey_buf;
+        ir_root->output_eeyore(eey_buf);
+
+        /// OUTPUT
+        for(const auto &s: eey_buf)
+            fprintf(oj_out, "%s\n", s.c_str());
+
+        goto cleanup;
+    }
+
+    mainerror("tigger and asm not implemented");
+
+    cleanup:
 
     /// CLEANUP
     fclose(oj_in);
