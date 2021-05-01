@@ -2,8 +2,8 @@
 #include <cstdio>
 #include <cstdlib>
 
-#include "front/enum_defs.hpp"
-#include "front/ast.hpp"
+#include "enum_defs.hpp"
+#include "ast.hpp"
 
 extern int yylex();
 void yyerror(const char*);

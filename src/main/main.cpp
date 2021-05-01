@@ -2,7 +2,7 @@
 #include <cstring>
 using namespace std;
 
-#include "front/ast.hpp"
+#include "../front/ast.hpp"
 
 extern int yyparse();
 extern void yyrestart(FILE*);

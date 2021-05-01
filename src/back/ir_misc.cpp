@@ -1,5 +1,5 @@
-#include "back/ir.hpp"
-#include "front/ast.hpp"
+#include "ir.hpp"
+#include "../front/ast.hpp"
 
 #include <algorithm>
 using std::max;

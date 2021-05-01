@@ -12,7 +12,7 @@ using std::unordered_map;
 using std::pair;
 using std::make_pair;
 
-#include "front/enum_defs.hpp"
+#include "../front/enum_defs.hpp"
 #include "reg.hpp"
 
 #define Commented(x) pair<x, string>

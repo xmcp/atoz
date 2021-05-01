@@ -7,7 +7,7 @@ using std::vector;
 using std::string;
 
 #include "enum_defs.hpp"
-#include "back/ir.hpp"
+#include "../back/ir.hpp"
 #include "index_scanner.hpp"
 
 extern int yylineno;

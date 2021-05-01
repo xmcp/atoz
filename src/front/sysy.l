@@ -1,8 +1,8 @@
 %{
 #include <cstring>
 
-#include "front/enum_defs.hpp"
-#include "front/ast.hpp"
+#include "enum_defs.hpp"
+#include "ast.hpp"
 #include "sysy.tab.hpp"
 
 extern void yyerror(const char*);

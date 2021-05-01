@@ -4,8 +4,8 @@
 using std::sprintf;
 using std::stringstream;
 
-#include "back/ir.hpp"
-#include "front/ast.hpp"
+#include "../back/ir.hpp"
+#include "ast.hpp"
 
 const bool EEYORE_GEN_COMMENTS = true;
 const bool OUTPUT_REGALLOC_PREFIX = false;

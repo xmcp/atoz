@@ -1,9 +1,9 @@
 #include <string>
 using std::string;
 
-#include "front/enum_defs.hpp"
-#include "front/ast.hpp"
-#include "sysy.tab.hpp"
+#include "../front/enum_defs.hpp"
+#include "../front/ast.hpp"
+#include "../front/sysy.tab.hpp"
 
 extern int yylex();
 extern void yyrestart(FILE*);
