@@ -8,6 +8,7 @@ using std::string;
 
 #include "enum_defs.hpp"
 #include "../back/ir.hpp"
+#include "../main/gc.hpp"
 #include "index_scanner.hpp"
 
 extern int yylineno;
@@ -35,19 +36,11 @@ struct NodeLocation {
 
 static vector<Ast*> allocated_ast_ptrs;
 
-struct Ast {
+struct Ast: GarbageCollectable {
     NodeLocation loc;
 
-    Ast(): loc() {
-        allocated_ast_ptrs.push_back(this);
-    }
-    // https://stackoverflow.com/questions/15114093/getting-source-type-is-not-polymorphic-when-trying-to-use-dynamic-cast
+    Ast(): GarbageCollectable(), loc() {}
     virtual ~Ast() = default;
-
-    static void delete_all() {
-        for(auto ptr: allocated_ast_ptrs)
-            delete ptr;
-    }
 };
 
 struct ConstExpResult {

@@ -14,6 +14,8 @@ using std::make_pair;
 
 #include "../front/enum_defs.hpp"
 #include "reg.hpp"
+#include "inst.hpp"
+#include "../main/gc.hpp"
 
 #define Commented(x) pair<x, string>
 
@@ -38,18 +40,9 @@ struct AstFuncDefParams;
 const int REGUID_ARG_OFFSET = 10000;
 string demystify_reguid(int uid);
 
-static vector<Ir*> allocated_ir_ptrs;
-
-struct Ir {
-    Ir() {
-        allocated_ir_ptrs.push_back(this);
-    }
+struct Ir: GarbageCollectable {
+    Ir(): GarbageCollectable() {}
     virtual ~Ir() = default;
-
-    static void delete_all() {
-        for(auto ptr: allocated_ir_ptrs)
-            delete ptr;
-    }
 };
 
 struct LVal {
@@ -130,6 +123,7 @@ struct IrDecl: Ir {
         def_or_null(nullptr), dest(LVal::asTempVar(tempvar)) {}
 
     void output_eeyore(list<string> &buf);
+    void gen_inst(InstRoot *root);
 };
 
 struct IrInit: Ir {
@@ -144,6 +138,7 @@ struct IrInit: Ir {
         dest(def), def(def), offset_bytes(idx*4), val(val) {}
 
     void output_eeyore(list<string> &buf);
+    void gen_inst(InstRoot *root);
 };
 
 struct IrDeclContainer: Ir {
@@ -183,6 +178,7 @@ struct IrFuncDef: IrDeclContainer {
     LVal gen_scalar_tempvar();
 
     void output_eeyore(list<string> &buf);
+    void gen_inst(InstRoot *root);
 
     // cfg
 
@@ -222,6 +218,7 @@ struct IrRoot: IrDeclContainer {
     }
 
     void output_eeyore(list<string> &buf);
+    void gen_inst(InstRoot *root);
 
     void install_builtin_destroy_sets();
 };
@@ -234,10 +231,11 @@ struct IrStmt: Ir {
     IrStmt(IrFuncDef *func): func(func) {}
 
     virtual void output_eeyore(list<string> &buf) = 0;
+    virtual void gen_inst(InstFuncDef *func) = 0;
 
     // cfg
     vector<IrStmt*> next, prev;
-    virtual void cfg_calc_next(IrStmt *nextline, IrFuncDef *func) { next.push_back(nextline); }
+    virtual void cfg_calc_next(IrStmt *nextline) { next.push_back(nextline); }
     virtual vector<int> defs() { return vector<int>(); }
     virtual vector<int> uses() { return vector<int>(); }
 
@@ -261,6 +259,7 @@ struct IrOpBinary: IrStmt {
         dest(dest), operand1(operand1), op(op), operand2(operand2) {}
 
     void output_eeyore(list<string> &buf) override;
+    void gen_inst(InstFuncDef *func) override;
 
     // cfg
     vector<int> defs() override {
@@ -285,6 +284,7 @@ struct IrOpUnary: IrStmt {
         dest(dest), op(op), operand(operand) {}
 
     void output_eeyore(list<string> &buf) override;
+    void gen_inst(InstFuncDef *func) override;
 
     // cfg
     vector<int> defs() override {
@@ -307,6 +307,7 @@ struct IrMov: IrStmt {
         dest(dest), src(src) {}
 
     void output_eeyore(list<string> &buf) override;
+    void gen_inst(InstFuncDef *func) override;
 
     // cfg
     vector<int> defs() override {
@@ -332,6 +333,7 @@ struct IrArraySet: IrStmt {
     }
 
     void output_eeyore(list<string> &buf) override;
+    void gen_inst(InstFuncDef *func) override;
 
     // cfg
     vector<int> defs() override {
@@ -358,6 +360,7 @@ struct IrArrayGet: IrStmt {
     }
 
     void output_eeyore(list<string> &buf) override;
+    void gen_inst(InstFuncDef *func) override;
 
     // cfg
     vector<int> defs() override {
@@ -383,9 +386,10 @@ struct IrCondGoto: IrStmt {
         operand1(operand1), op(op), operand2(operand2), label(label) {}
 
     void output_eeyore(list<string> &buf) override;
+    void gen_inst(InstFuncDef *func) override;
 
     // cfg
-    void cfg_calc_next(IrStmt *nextline, IrFuncDef *func) override {
+    void cfg_calc_next(IrStmt *nextline) override {
         auto label_stmt = func->labels.find(label)->second;
         next.push_back((IrStmt*)label_stmt);
         next.push_back(nextline);
@@ -405,9 +409,10 @@ struct IrGoto: IrStmt {
         label(label) {}
 
     void output_eeyore(list<string> &buf) override;
+    void gen_inst(InstFuncDef *func) override;
 
     // cfg
-    void cfg_calc_next(IrStmt *_nextline, IrFuncDef *func) override {
+    void cfg_calc_next(IrStmt *_nextline) override {
         auto label_stmt = func->labels.find(label)->second;
         next.push_back((IrStmt*)label_stmt);
     }
@@ -420,6 +425,7 @@ struct IrLabel: IrStmt {
         label(label) {}
 
     void output_eeyore(list<string> &buf) override;
+    void gen_inst(InstFuncDef *func) override;
 };
 
 struct IrParam: IrStmt {
@@ -429,6 +435,7 @@ struct IrParam: IrStmt {
         param(param) {}
 
     void output_eeyore(list<string> &buf) override;
+    void gen_inst(InstFuncDef *func) override;
 
     // cfg
     vector<int> uses() override {
@@ -445,6 +452,7 @@ struct IrCallVoid: IrStmt {
         name(fn) {}
 
     void output_eeyore(list<string> &buf) override;
+    void gen_inst(InstFuncDef *func) override;
 };
 
 struct IrCall: IrStmt {
@@ -455,6 +463,7 @@ struct IrCall: IrStmt {
         ret(ret), name(fn) {}
 
     void output_eeyore(list<string> &buf) override;
+    void gen_inst(InstFuncDef *func) override;
 
     // cfg
     vector<int> defs() override {
@@ -468,9 +477,10 @@ struct IrReturnVoid: IrStmt {
     IrReturnVoid(IrFuncDef *func): IrStmt(func) {}
 
     void output_eeyore(list<string> &buf) override;
+    void gen_inst(InstFuncDef *func) override;
 
     // cfg
-    void cfg_calc_next(IrStmt *_nextline, IrFuncDef *func) override {
+    void cfg_calc_next(IrStmt *_nextline) override {
         /* // flag:return-label
         auto label_stmt = func->labels.find(func->return_label)->second;
         next.push_back((IrStmt*)label_stmt);
@@ -484,9 +494,10 @@ struct IrReturn: IrStmt {
         retval(retval) {}
 
     void output_eeyore(list<string> &buf) override;
+    void gen_inst(InstFuncDef *func) override;
 
     // cfg
-    void cfg_calc_next(IrStmt *_nextline, IrFuncDef *func) override {
+    void cfg_calc_next(IrStmt *_nextline) override {
         /* // flag:return-label
         auto label_stmt = func->labels.find(func->return_label)->second;
         next.push_back((IrStmt*)label_stmt);
@@ -505,7 +516,7 @@ struct IrLabelReturn: IrLabel {
     void output_eeyore(list<string> &buf) override;
 
     // cfg
-    void cfg_calc_next(IrStmt *_nextline, IrFuncDef *_func) override {
+    void cfg_calc_next(IrStmt *_nextline) override {
         // connects to nothing
     }
 };

@@ -89,7 +89,7 @@ void IrFuncDef::connect_all_cfg() {
         it++;
         auto nextline = it->first;
 
-        stmt->cfg_calc_next(nextline, this);
+        stmt->cfg_calc_next(nextline);
 
         for(auto nstmt: stmt->next) {
             if(nstmt==nullptr)

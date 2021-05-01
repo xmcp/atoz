@@ -2,6 +2,7 @@
 #include <cstring>
 using namespace std;
 
+#include "gc.hpp"
 #include "../front/ast.hpp"
 
 extern int yyparse();
@@ -116,8 +117,7 @@ int main(int argc, char **argv) {
     /// CLEANUP
     fclose(oj_in);
     fclose(oj_out);
-    Ast::delete_all();
-    Ir::delete_all();
+    GarbageCollectable::delete_all();
 
     return 0;
 }
