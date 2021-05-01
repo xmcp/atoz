@@ -3,7 +3,7 @@
 #include <string>
 #include <list>
 #include <unordered_map>
-#include <cassert>
+#include "../main/myassert.hpp"
 #include <utility> // make_pair
 using std::string;
 using std::list;

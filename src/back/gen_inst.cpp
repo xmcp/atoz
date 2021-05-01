@@ -13,7 +13,7 @@ void warn_dest_not_used(LVal v, string funcname) {
         printf("{temp %d}", v.val.tempvar);
     else // reference
         printf("{ref %s}", v.val.reference->name.c_str());
-    printf(" in function %s\b", funcname.c_str());
+    printf(" in function %s\n", funcname.c_str());
 }
 
 const Preg tmpreg0 = Preg('t', 0);

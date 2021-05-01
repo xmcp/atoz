@@ -1,5 +1,5 @@
 #include <cstdio>
-#include <cassert>
+#include "../main/myassert.hpp"
 #include <sstream>
 using std::sprintf;
 using std::stringstream;

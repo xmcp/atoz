@@ -2,7 +2,7 @@
 
 #include <vector>
 #include <string>
-#include <cassert>
+#include "../main/myassert.hpp"
 using std::vector;
 using std::string;
 

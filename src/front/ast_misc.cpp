@@ -1,4 +1,4 @@
-#include <cassert>
+#include "../main/myassert.hpp"
 
 #include "ast.hpp"
 #include "tree_completing.hpp"

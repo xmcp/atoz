@@ -7,7 +7,7 @@
 
 #include <unordered_map>
 #include <string>
-#include <cassert>
+#include "../main/myassert.hpp"
 using std::unordered_map;
 using std::string;
 using std::make_pair;
