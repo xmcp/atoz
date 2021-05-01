@@ -76,9 +76,11 @@ void IrFuncDef::push_stmt(IrStmt *stmt, string comment) {
         auto label_stmt = (IrLabel*)stmt;
         labels.insert(make_pair(label_stmt->label, label_stmt));
     }
+    /* // flag:return-label
     if(istype(stmt, IrLabelReturn)) {
         labels.insert(make_pair(return_label, (IrLabel*)stmt));
     }
+    */
 }
 
 void IrFuncDef::connect_all_cfg() {

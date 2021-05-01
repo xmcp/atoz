@@ -164,15 +164,19 @@ struct IrFuncDef: IrDeclContainer {
     AstFuncDefParams *params;
     list<Commented(IrStmt*)> stmts;
 
+    /* // flag:return-label
     int return_label;
     LVal _eeyore_retval_var; // used in gen_eeyore, this tempvar is not in cfg because tigger doesn't need it
+    */
 
     int spillsize; // in words
     int callersavesize; // in words, initialized in `report_destroyed_set`
 
     IrFuncDef(IrRoot *root, FuncType type, string name, AstFuncDefParams *params): IrDeclContainer(),
-       root(root), type(type), name(name), params(params), stmts({}), spillsize(0), callersavesize(0),
-       return_label(gen_label()), _eeyore_retval_var(gen_scalar_tempvar()) {}
+       root(root), type(type), name(name), params(params), stmts({}), spillsize(0), callersavesize(0)
+       /* // flag:return-label
+       , return_label(gen_label()), _eeyore_retval_var(gen_scalar_tempvar())
+       */ {}
     void push_stmt(IrStmt *stmt, string comment = "");
 
     int gen_label();
@@ -467,8 +471,10 @@ struct IrReturnVoid: IrStmt {
 
     // cfg
     void cfg_calc_next(IrStmt *_nextline, IrFuncDef *func) override {
+        /* // flag:return-label
         auto label_stmt = func->labels.find(func->return_label)->second;
         next.push_back((IrStmt*)label_stmt);
+        */
     }
 };
 
@@ -481,8 +487,10 @@ struct IrReturn: IrStmt {
 
     // cfg
     void cfg_calc_next(IrStmt *_nextline, IrFuncDef *func) override {
+        /* // flag:return-label
         auto label_stmt = func->labels.find(func->return_label)->second;
         next.push_back((IrStmt*)label_stmt);
+        */
     }
     vector<int> uses() override {
         auto v = vector<int>();
@@ -490,7 +498,7 @@ struct IrReturn: IrStmt {
         return v;
     }
 };
-
+/* // flag:return-label
 struct IrLabelReturn: IrLabel {
     IrLabelReturn(IrFuncDef *func, int label): IrLabel(func, label) {}
 
@@ -501,3 +509,4 @@ struct IrLabelReturn: IrLabel {
         // connects to nothing
     }
 };
+*/

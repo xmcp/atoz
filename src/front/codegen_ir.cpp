@@ -82,7 +82,13 @@ void AstFuncDef::gen_ir(IrRoot *root) {
 
     body->gen_ir(func);
 
+    /* // flag:return-label
     func->push_stmt(new IrLabelReturn(func, func->return_label), "func epilog");
+    */
+    if(type==FuncVoid)
+        func->push_stmt(new IrReturnVoid(func), "func epilog");
+    else
+        func->push_stmt(new IrReturn(func, RVal::asConstExp(0)), "func epilog");
 }
 
 void AstFuncUseParams::gen_ir(IrFuncDef *func) {

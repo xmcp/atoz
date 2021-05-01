@@ -25,9 +25,11 @@ string RVal::eeyore_ref_local(IrFuncDef *func) {
             pfx = "{global}";
         else {
             auto it = func->vreg_map.find(reguid());
+            /* // flag:return-label
             if(type==TempVar && val.tempvar==func->_eeyore_retval_var.val.tempvar)
                 pfx = "{retval}";
-            else if(it==func->vreg_map.end())
+            else */
+            if(it==func->vreg_map.end())
                 pfx = "{???}";
             else
                 pfx = it->second.tigger_ref();
@@ -60,9 +62,11 @@ string LVal::eeyore_ref_local(IrFuncDef *func) {
             pfx = "{global}";
         else {
             auto it = func->vreg_map.find(reguid());
+            /* // flag:return-label
             if(type==TempVar && val.tempvar==func->_eeyore_retval_var.val.tempvar)
                 pfx = "{retval}";
-            else if(it==func->vreg_map.end())
+            else */
+            if(it==func->vreg_map.end())
                 pfx = "{???}";
             else
                 pfx = it->second.tigger_ref();
@@ -219,14 +223,21 @@ void IrCall::output_eeyore(list<string> &buf) {
 }
 
 void IrReturnVoid::output_eeyore(list<string> &buf) {
+    /* // flag:return-label
     outstmt("goto l%d", func->return_label);
+    */
+    outstmt("return");
 }
 
 void IrReturn::output_eeyore(list<string> &buf) {
+    /* // flag:return-label
     outstmt("%s = %s", eey(func->_eeyore_retval_var), eey(retval));
     outstmt("goto l%d", func->return_label);
+    */
+    outstmt("return %s", eey(retval));
 }
 
+/* // flag:return-label
 void IrLabelReturn::output_eeyore(list<string> &buf) {
     outstmt("l%d:", func->return_label);
     if(func->type==FuncVoid)
@@ -234,5 +245,6 @@ void IrLabelReturn::output_eeyore(list<string> &buf) {
     else
         outstmt("return %s", eey(func->_eeyore_retval_var));
 }
+*/
 
 #undef eey
