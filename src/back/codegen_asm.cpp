@@ -227,13 +227,9 @@ void InstStoreStack::output_asm(list<string> &buf) {
 
 void InstLoadStack::output_asm(list<string> &buf) {
     if(imm_overflows(stackidx*4)) {
-        Preg tmp = Preg('t', 0);
-        if(dest==Preg('t', 0))
-            tmp = Preg('t', 1);
-
-        outstmt("li %s, %d", tig(tmp), stackidx*4);
-        outstmt("add %s, %s, sp", tig(tmp), tig(tmp));
-        outstmt("lw %s, (%s)", tig(dest), tig(tmp));
+        outstmt("li %s, %d", tig(dest), stackidx*4);
+        outstmt("add %s, %s, sp", tig(dest), tig(dest));
+        outstmt("lw %s, (%s)", tig(dest), tig(dest));
     } else {
         outstmt("lw %s, %d(sp)", tig(dest), stackidx*4);
     }

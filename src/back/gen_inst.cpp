@@ -185,7 +185,10 @@ void IrOpUnary::gen_inst(InstFuncDef *func) {
 void IrMov::gen_inst(InstFuncDef *func) {
     ret_if_unused(dest);
 
-    func->push_stmt(new InstMov(rstore(dest), rload(src, 1)));
+    if(src.type==RVal::ConstExp)
+        func->push_stmt(new InstLoadImm(rstore(dest), src.val.constexp));
+    else
+        func->push_stmt(new InstMov(rstore(dest), rload(src, 1)));
     dostore(dest);
 }
 
