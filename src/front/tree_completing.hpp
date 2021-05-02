@@ -7,11 +7,11 @@
 
 #include <unordered_map>
 #include <string>
-#include "../main/myassert.hpp"
 using std::unordered_map;
 using std::string;
 using std::make_pair;
 
+#include "../main/common.hpp"
 #include "ast.hpp"
 
 #define lookuperror(...) do { \

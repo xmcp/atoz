@@ -1,8 +1,9 @@
 #pragma once
 
-#include "../main/myassert.hpp"
 #include <string>
 using std::string;
+
+#include "../main/common.hpp"
 
 /*
 

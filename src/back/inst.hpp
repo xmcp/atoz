@@ -3,13 +3,13 @@
 #include <string>
 #include <list>
 #include <unordered_map>
-#include "../main/myassert.hpp"
 #include <utility> // make_pair
 using std::string;
 using std::list;
 using std::unordered_map;
 using std::make_pair;
 
+#include "../main/common.hpp"
 #include "../main/gc.hpp"
 #include "reg.hpp"
 #include "../front/enum_defs.hpp"
@@ -149,7 +149,9 @@ struct InstArraySet: InstStmt {
     Preg src;
 
     InstArraySet(Preg dest, int doffset, Preg src):
-        dest(dest), doffset(doffset), src(src) {}
+        dest(dest), doffset(doffset), src(src) {
+        assert(!imm_overflows(doffset));
+    }
 
     void output_tigger(list<string> &buf) override;
     void output_asm(list<string> &buf) override;
@@ -161,7 +163,9 @@ struct InstArrayGet: InstStmt {
     int soffset;
 
     InstArrayGet(Preg dest, Preg src, int soffset):
-        dest(dest), src(src), soffset(soffset) {}
+        dest(dest), src(src), soffset(soffset) {
+        assert(src!=Preg('t', 0)); // t0 used as temp
+    }
 
     void output_tigger(list<string> &buf) override;
     void output_asm(list<string> &buf) override;

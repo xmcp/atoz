@@ -1,5 +1,4 @@
-#include "../main/myassert.hpp"
-
+#include "../main/common.hpp"
 #include "ast.hpp"
 #include "tree_completing.hpp"
 

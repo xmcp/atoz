@@ -346,6 +346,7 @@ struct IrArraySet: IrStmt {
     IrArraySet(IrFuncDef *func, LVal dest, int doffset, RVal src): IrStmt(func),
         dest(dest), doffset(doffset), src(src) {
         assert(doffset%4==0);
+        assert(!imm_overflows(doffset));
     }
 
     void output_eeyore(list<string> &buf) override;
@@ -368,6 +369,7 @@ struct IrArrayGet: IrStmt {
     IrArrayGet(IrFuncDef *func, LVal dest, RVal src, int soffset): IrStmt(func),
         dest(dest), src(src), soffset(soffset) {
         assert(soffset%4==0);
+        // soffset can overflow in arrayget: this is fine (can will use t0 as temp ptr)
     }
 
     void output_eeyore(list<string> &buf) override;

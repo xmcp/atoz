@@ -2,10 +2,10 @@
 
 #include <vector>
 #include <string>
-#include "../main/myassert.hpp"
 using std::vector;
 using std::string;
 
+#include "../main/common.hpp"
 #include "enum_defs.hpp"
 #include "../back/ir.hpp"
 #include "../main/gc.hpp"

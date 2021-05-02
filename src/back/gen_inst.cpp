@@ -29,17 +29,26 @@ void IrRoot::gen_inst(InstRoot *root) {
     assert(root->mainfunc!=nullptr);
 
     // generate global array init to start of main
+    const Preg rega0 = Preg('a', 0); // can be used before program starts
     for(auto arrdecl_pair: root->decl_arrays) { // global idx: decl
         if(arrdecl_pair.second->initval.empty())
             continue;
 
+        // t0 stores global ptr (t1 for temp if index overflows), a0 stores offset
+
         // BELOW STMTS IN REVERSED ORDER, because of `push_front`
 
-/* ↑ */ for(auto kvpair: arrdecl_pair.second->initval) { // offset bytes -> val
-/* ↑ */    root->mainfunc->stmts.push_front(new InstArraySet(tmpreg1, kvpair.first, tmpreg0));
-/* ↑ */    root->mainfunc->stmts.push_front(new InstLoadImm(tmpreg0, kvpair.second));
-/* ↑ */ }
-/* ↑ */ root->mainfunc->stmts.push_front(new InstLoadAddrGlobal(tmpreg1, arrdecl_pair.first));
+        for(auto kvpair: arrdecl_pair.second->initval) { // offset bytes -> val
+            if(imm_overflows(kvpair.first)) {
+/* ↑ */         root->mainfunc->stmts.push_front(new InstArraySet(tmpreg1, 0, rega0));
+/* ↑ */         root->mainfunc->stmts.push_front(new InstOpBinary(tmpreg1, tmpreg0, OpPlus, tmpreg1));
+/* ↑ */         root->mainfunc->stmts.push_front(new InstLoadImm(tmpreg1, kvpair.first));
+            } else {
+/* ↑ */         root->mainfunc->stmts.push_front(new InstArraySet(tmpreg0, kvpair.first, rega0));
+            }
+/* ↑ */     root->mainfunc->stmts.push_front(new InstLoadImm(rega0, kvpair.second));
+        }
+/* ↑ */ root->mainfunc->stmts.push_front(new InstLoadAddrGlobal(tmpreg0, arrdecl_pair.first));
 
         // ABOVE STMTS IN REVERSED ORDER
     }
@@ -215,14 +224,14 @@ void IrArrayGet::gen_inst(InstFuncDef *func) {
     } else { // reference
         switch(src.val.reference->pos) {
             case DefGlobal:
-                func->push_stmt(new InstLoadAddrGlobal(tmpreg0, src.val.reference->index));
-                func->push_stmt(new InstArrayGet(rstore(dest), tmpreg0, soffset));
+                func->push_stmt(new InstLoadAddrGlobal(tmpreg1, src.val.reference->index));
+                func->push_stmt(new InstArrayGet(rstore(dest), tmpreg1, soffset));
                 break;
 
             case DefLocal:
                 assert(this->func->get_vreg(src).pos==Vreg::VregInStack);
-                func->push_stmt(new InstLoadAddrStack(tmpreg0, this->func->get_vreg(src).spilloffset));
-                func->push_stmt(new InstArrayGet(rstore(dest), tmpreg0, soffset));
+                func->push_stmt(new InstLoadAddrStack(tmpreg1, this->func->get_vreg(src).spilloffset));
+                func->push_stmt(new InstArrayGet(rstore(dest), tmpreg1, soffset));
                 break;
 
             case DefArg:

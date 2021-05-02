@@ -69,8 +69,13 @@ void AstDef::gen_ir_init_local(IrFuncDef *func) {
         for(int i=0; i<initval.totelems; i++)
             if(initval.value[i] != nullptr) {
                 RVal trval = initval.value[i]->gen_rval(func);
-                //outasm("T%d [%d] = %s // init %s local #%d/%d", index, i*4, trval.eeyore_ref_local(), name.c_str(), i, initval.totelems);
-                func->push_stmt(new IrArraySet(func, this, i*4, trval), name);
+                if(imm_overflows(i*4)) { // calc ptr then set into ptr
+                    LVal ptr = func->gen_scalar_tempvar();
+                    func->push_stmt(new IrOpBinary(func, ptr, this, OpPlus, RVal::asConstExp(i*4)));
+                    func->push_stmt(new IrArraySet(func, ptr, 0, trval), name);
+                } else { // directly set into array
+                    func->push_stmt(new IrArraySet(func, this, i*4, trval), name);
+                }
             }
     }
 }
@@ -137,14 +142,14 @@ void AstStmtAssignment::gen_ir(IrFuncDef *func) {
     if(!lval->idxinfo->val.empty()) { // has array index
         AstExp *off = lval->def->initval.get_offset_bytes(lval->idxinfo, true);
 
-        if(off->get_const().iserror) { // not constant index, do pointer calculation
+        if (!off->get_const().iserror && !imm_overflows(off->get_const().val)) { // constant index
+            func->push_stmt(new IrArraySet(func, lval->def, off->get_const().val, val));
+        } else { // not constant index or overflows, do pointer calculation
             RVal toff = off->gen_rval(func);
             LVal ptr = func->gen_scalar_tempvar();
             func->push_stmt(new IrOpBinary(func, ptr, lval->def, OpPlus, toff));
             //outasm("%c%d [%s] = %s // assign", cdef(lval->def_or_null), lval->def_or_null->index, tlidx.eeyore_ref(), trval.eeyore_ref_local());
             func->push_stmt(new IrArraySet(func, ptr, 0, val));
-        } else { // constant index
-            func->push_stmt(new IrArraySet(func, lval->def, off->get_const().val, val));
         }
     } else { // plain value
         //outasm("%c%d = %s // assign", cdef(lval->def_or_null), lval->def_or_null->index, trval.eeyore_ref_local());

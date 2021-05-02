@@ -1,17 +1,9 @@
+#include "../main/common.hpp"
 #include "inst.hpp"
 
 const int ASM_INST_BUFSIZE = 512;
 
 static char instbuf[ASM_INST_BUFSIZE];
-
-#define outasm(...) do { \
-    snprintf(instbuf, sizeof(instbuf), __VA_ARGS__); \
-    buf.push_back(string(instbuf)); \
-} while(0)
-
-#define outstmt(...) do { \
-    outasm("    " __VA_ARGS__); \
-} while(0)
 
 void InstRoot::output_asm(list<string> &buf) {
     outasm("# BEGIN ASM");
@@ -50,13 +42,7 @@ void InstDeclArray::output_asm(list<string> &buf) {
 
 #define STK(stacksize) (((stacksize)/4 + 1) * 16)
 
-bool imm_overflows(int imm) {
-    return !!(imm>>11);
-}
-
 void InstFuncDef::output_asm(list<string> &buf) {
-    if(imm_overflows(STK(stacksize)))
-        assert(false);
 
     outasm("#--- FUNCTION %s", name.c_str());
     outasm("  .text");
@@ -66,7 +52,12 @@ void InstFuncDef::output_asm(list<string> &buf) {
     outasm("");
     outasm("%s:", name.c_str());
     outasm("  sw      ra, -4(sp)");
-    outasm("  addi    sp, sp, -%d", STK(stacksize));
+    if(imm_overflows(-STK(stacksize))) {
+        outasm("  li     t0, %d", -STK(stacksize));
+        outasm("  add    sp, sp, t0");
+    } else {
+        outasm("  addi    sp, sp, %d", -STK(stacksize));
+    }
 
     for(auto stmt: stmts)
         stmt->output_asm(buf);
@@ -146,23 +137,28 @@ void InstMov::output_asm(list<string> &buf) {
 }
 
 void InstLoadImm::output_asm(list<string> &buf) {
-    if(imm_overflows(imm))
-        assert(false);
     outstmt("li %s, %d", tig(dest), imm);
 }
 
 void InstArraySet::output_asm(list<string> &buf) {
-    if(imm_overflows(doffset))
-        assert(false);
+    // did hard work to avoid this scenario
+    assert(!imm_overflows(doffset));
 
     outstmt("sw %s, %d(%s)", tig(src), doffset, tig(dest));
 }
 
 void InstArrayGet::output_asm(list<string> &buf) {
-    if(imm_overflows(soffset))
-        assert(false);
+    // confirmed in constructor
+    assert(src!=Preg('t', 0));
 
-    outstmt("lw %s, %d(%s)", tig(dest), soffset, tig(src));
+    if(imm_overflows(soffset)) {
+        outstmt("li t0, %d", soffset);
+        outstmt("add t0, t0, %s", tig(src));
+        outstmt("lw %s, (t0)", tig(dest));
+    } else {
+        outstmt("lw %s, %d(%s)", tig(dest), soffset, tig(src));
+    }
+
 }
 
 void InstCondGoto::output_asm(list<string> &buf) {
@@ -204,26 +200,43 @@ void InstCall::output_asm(list<string> &buf) {
 }
 
 void InstRet::output_asm(list<string> &buf) {
-    if(imm_overflows(STK(fn_stacksize)))
-        assert(false);
+    if(imm_overflows(STK(fn_stacksize))) {
+        outstmt("li t0, %d", STK(fn_stacksize));
+        outstmt("add sp, t0");
+    } else {
+        outstmt("addi sp, sp, %d", STK(fn_stacksize));
+    }
 
-    outstmt("addi sp, sp, %d", STK(fn_stacksize));
     outstmt("lw ra, %d(sp)", -4);
     outstmt("ret");
 }
 
 void InstStoreStack::output_asm(list<string> &buf) {
-    if(imm_overflows(stackidx*4))
-        assert(false);
+    if(imm_overflows(stackidx*4)) {
+        Preg tmp = Preg('t', 0);
+        if(src==Preg('t', 0))
+            tmp = Preg('t', 1);
 
-    outstmt("sw %s, %d(sp)", tig(src), stackidx*4);
+        outstmt("li %s, %d", tig(tmp), stackidx*4);
+        outstmt("add %s, %s, sp", tig(tmp), tig(tmp));
+        outstmt("sw %s, (%s)", tig(src), tig(tmp));
+    } else {
+        outstmt("sw %s, %d(sp)", tig(src), stackidx*4);
+    }
 }
 
 void InstLoadStack::output_asm(list<string> &buf) {
-    if(imm_overflows(stackidx*4))
-        assert(false);
+    if(imm_overflows(stackidx*4)) {
+        Preg tmp = Preg('t', 0);
+        if(dest==Preg('t', 0))
+            tmp = Preg('t', 1);
 
-    outstmt("lw %s, %d(sp)", tig(dest), stackidx*4);
+        outstmt("li %s, %d", tig(tmp), stackidx*4);
+        outstmt("add %s, %s, sp", tig(tmp), tig(tmp));
+        outstmt("lw %s, (%s)", tig(dest), tig(tmp));
+    } else {
+        outstmt("lw %s, %d(sp)", tig(dest), stackidx*4);
+    }
 }
 
 void InstLoadGlobal::output_asm(list<string> &buf) {
@@ -232,10 +245,13 @@ void InstLoadGlobal::output_asm(list<string> &buf) {
 }
 
 void InstLoadAddrStack::output_asm(list<string> &buf) {
-    if(imm_overflows(stackidx*4))
-        assert(false);
+    if(imm_overflows(stackidx*4)) {
+        outstmt("li %s, %d", tig(dest), stackidx*4);
+        outstmt("add %s, %s, sp", tig(dest), tig(dest));
+    } else {
+        outstmt("addi %s, sp, %d", tig(dest), stackidx*4);
+    }
 
-    outstmt("addi %s, sp, %d", tig(dest), stackidx*4);
 }
 
 void InstLoadAddrGlobal::output_asm(list<string> &buf) {

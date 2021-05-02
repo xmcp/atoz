@@ -1,9 +1,9 @@
 #include <cstdio>
-#include "../main/myassert.hpp"
 #include <sstream>
 using std::sprintf;
 using std::stringstream;
 
+#include "../main/common.hpp"
 #include "../back/ir.hpp"
 #include "ast.hpp"
 
@@ -81,15 +81,6 @@ string LVal::eeyore_ref_local(IrFuncDef *func) {
 }
 
 #undef cdef
-
-#define outasm(...) do { \
-    snprintf(instbuf, sizeof(instbuf), __VA_ARGS__); \
-    buf.push_back(string(instbuf)); \
-} while(0)
-
-#define outstmt(...) do { \
-    outasm("    " __VA_ARGS__); \
-} while(0)
 
 #define outcomment(fmt, ...) do { \
     snprintf(instbuf, sizeof(instbuf), "%s // " fmt, buf.back().c_str(), __VA_ARGS__); \

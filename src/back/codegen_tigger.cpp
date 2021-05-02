@@ -1,17 +1,9 @@
+#include "../main/common.hpp"
 #include "inst.hpp"
 
 const int TIGGER_INST_BUFSIZE = 512;
 
 static char instbuf[TIGGER_INST_BUFSIZE];
-
-#define outasm(...) do { \
-    snprintf(instbuf, sizeof(instbuf), __VA_ARGS__); \
-    buf.push_back(string(instbuf)); \
-} while(0)
-
-#define outstmt(...) do { \
-    outasm("    " __VA_ARGS__); \
-} while(0)
 
 void InstRoot::output_tigger(list<string> &buf) {
     outasm("// BEGIN TIGGER");
