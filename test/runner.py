@@ -1,6 +1,6 @@
 import subprocess
 
-FAILFAST = False
+FAILFAST = True
 
 def run_cmd(cmdline, timeout_sec, inp): # errno, stdout, stderr
     p = subprocess.Popen(

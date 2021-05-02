@@ -119,7 +119,7 @@ void IrFuncDef::report_destroyed_set() {
         destory_set.insert(Preg('a', 0));
 
     // insert it first, therefore we can get it if the function recurses
-    root->destroy_sets.insert(make_pair(name, destory_set));
+    root->destroy_sets[name] = destory_set;
 
     // destroyed by sub functions
     for(const auto& stmtpair: stmts) {
@@ -151,7 +151,7 @@ void IrFuncDef::report_destroyed_set() {
     }
 
     // update destory sets
-    root->destroy_sets.insert(make_pair(name, destory_set));
+    root->destroy_sets[name] = destory_set;
 }
 
 void IrRoot::install_builtin_destroy_sets() {

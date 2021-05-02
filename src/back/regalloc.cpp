@@ -181,6 +181,7 @@ int get_sacrificed_node(CorrGraph graph) {
         // todo: add heuristic here
         return x;
     }
+    assert(false);
 }
 
 Preg choose_reg(CorrGraph graph, int x, vector<Preg> avail_regs, const unordered_map<int, Vreg> &vreg_map) {
