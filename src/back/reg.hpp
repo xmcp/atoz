@@ -47,12 +47,12 @@ struct Preg {
     };
 
     string analyzed_eeyore_ref() {
-        char buf[16];
+        char buf[32];
         sprintf(buf, "{reg: %c%d}", cat, index);
         return string(buf);
     }
     string tigger_ref() {
-        char buf[16];
+        char buf[32];
         sprintf(buf, "%c%d", cat, index);
         return string(buf);
     }
@@ -114,7 +114,7 @@ public:
         if(pos==VregInReg)
             return reg.analyzed_eeyore_ref();
         else {
-            char buf[16];
+            char buf[32];
             if(spillspan == 1)
                 sprintf(buf, "{stk #%d}", spilloffset);
             else

@@ -18,7 +18,7 @@ static char instbuf[EEYORE_INST_BUFSIZE];
 
 string RVal::eeyore_ref_local(IrFuncDef *func) {
     string pfx;
-    char buf[16];
+    char buf[32];
 
     if(OUTPUT_REGALLOC_PREFIX && type != ConstExp) {
         if(type==Reference && val.reference->pos==DefGlobal)
@@ -46,7 +46,7 @@ string RVal::eeyore_ref_local(IrFuncDef *func) {
 
 
 string LVal::eeyore_ref_global() {
-    char buf[16];
+    char buf[32];
     switch(type) {
         case Reference: sprintf(buf, "%c%d", cdef(val.reference), val.reference->index); break;
         case TempVar: sprintf(buf, "t%d", val.tempvar); break;
@@ -55,7 +55,7 @@ string LVal::eeyore_ref_global() {
 }
 string LVal::eeyore_ref_local(IrFuncDef *func) {
     string pfx;
-    char buf[16];
+    char buf[32];
 
     if(OUTPUT_REGALLOC_PREFIX) {
         if(type==Reference && val.reference->pos==DefGlobal)

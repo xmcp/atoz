@@ -9,7 +9,7 @@ using std::unordered_set;
 #define istype(ptr, cls) (dynamic_cast<cls*>(ptr)!=nullptr)
 
 string demystify_reguid(int uid) {
-    char buf[16];
+    char buf[32];
     if(uid<0)
         sprintf(buf, "t%d", -(uid+1));
     else if(uid>=REGUID_ARG_OFFSET)
