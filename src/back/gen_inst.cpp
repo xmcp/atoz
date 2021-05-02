@@ -87,9 +87,6 @@ void IrFuncDef::gen_inst(InstRoot *root) {
         func->push_stmt(new InstComment(s));
     }
 
-    if(name=="main")
-        root->mainfunc = func;
-
     for(auto stmtpair: stmts) {
         if(INST_GEN_COMMENTS) {
             func->push_stmt(new InstComment(""));

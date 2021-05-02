@@ -27,11 +27,11 @@ void InstRoot::output_asm(list<string> &buf) {
 }
 
 void InstDeclScalar::output_asm(list<string> &buf) {
-    outasm("  .global   global_var");
+    outasm("  .global   v%d", globalidx);
     outasm("  .section  .sdata");
     outasm("  .align    2");
-    outasm("  .type     global_var, @object");
-    outasm("  .size     global_var, 4");
+    outasm("  .type     v%d, @object", globalidx);
+    outasm("  .size     v%d, 4", globalidx);
     outasm("v%d:", globalidx);
     outasm("  .word     %d", initval);
 }

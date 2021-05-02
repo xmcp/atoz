@@ -83,6 +83,8 @@ struct InstRoot: Inst {
     }
     void push_func(InstFuncDef *func) {
         funcs.push_back(func);
+        if(func->name=="main")
+            mainfunc = func;
     }
 
     void output_tigger(list<string> &buf);
