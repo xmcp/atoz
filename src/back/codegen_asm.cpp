@@ -9,10 +9,11 @@ void InstRoot::output_asm(list<string> &buf) {
     outasm("# BEGIN ASM");
 
     outasm("#--- SCALAR DECL");
-    for(auto scalarpair: decl_scalars)
+    for(auto scalarpair: decl_scalars) {
         scalarpair.second->output_asm(buf);
+        outasm("");
+    }
 
-    outasm("");
     outasm("#--- ARRAY DECL");
     for(auto arraypair: decl_arrays)
         arraypair.second->output_asm(buf);
@@ -110,22 +111,19 @@ void InstOpBinary::output_asm(list<string> &buf) {
         case OpOr:
         default:
             assert(false);
-            assert(false);
             break;
     }
 }
 
 void InstOpUnary::output_asm(list<string> &buf) {
     switch(op) {
-        case OpPos:
-            outstmt("mv %s, %s", tig(dest), tig(operand));
-            break;
         case OpNeg:
             outstmt("neg %s, %s", tig(dest), tig(operand));
             break;
         case OpNot:
             outstmt("seqz %s, %s", tig(dest), tig(operand));
             break;
+        case OpPos:
         default:
             assert(false);
             break;
@@ -133,7 +131,10 @@ void InstOpUnary::output_asm(list<string> &buf) {
 }
 
 void InstMov::output_asm(list<string> &buf) {
-    outstmt("mv %s, %s", tig(dest), tig(src));
+    if(dest==src)
+        outstmt("# ... mv %s to self", tig(dest));
+    else
+        outstmt("mv %s, %s", tig(dest), tig(src));
 }
 
 void InstLoadImm::output_asm(list<string> &buf) {

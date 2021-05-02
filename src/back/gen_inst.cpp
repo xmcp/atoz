@@ -175,7 +175,10 @@ void IrOpBinary::gen_inst(InstFuncDef *func) {
 void IrOpUnary::gen_inst(InstFuncDef *func) {
     ret_if_unused(dest);
 
-    func->push_stmt(new InstOpUnary(rstore(dest), op, rload(operand, 1)));
+    if(op==OpPos)
+        func->push_stmt(new InstMov(rstore(dest), rload(operand, 1)));
+    else
+        func->push_stmt(new InstOpUnary(rstore(dest), op, rload(operand, 1)));
     dostore(dest);
 }
 
