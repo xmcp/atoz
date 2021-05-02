@@ -389,11 +389,11 @@ struct IrArrayGet: IrStmt {
 
 struct IrCondGoto: IrStmt {
     RVal operand1;
-    BinaryOpKinds op; // should be logical op
+    RelKinds op; // should be logical op
     RVal operand2;
     int label;
 
-    IrCondGoto(IrFuncDef *func, RVal operand1, BinaryOpKinds op, RVal operand2, int label): IrStmt(func),
+    IrCondGoto(IrFuncDef *func, RVal operand1, RelKinds op, RVal operand2, int label): IrStmt(func),
         operand1(operand1), op(op), operand2(operand2), label(label) {}
 
     void output_eeyore(list<string> &buf) override;

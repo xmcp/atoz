@@ -68,7 +68,10 @@ void parse_oj_args(int argc, char **argv) {
     }
 }
 
-void cleanup() {
+void output_and_cleanup(const list<string> &output_buf) {
+    for(const auto &s: output_buf)
+        fprintf(oj_out, "%s\n", s.c_str());
+
     fclose(oj_in);
     fclose(oj_out);
     GarbageCollectable::delete_all();
@@ -109,32 +112,33 @@ int main(int argc, char **argv) {
         }
     }
 
-    /// GEN EEYORE AND OUTPUT
+    /// OUTPUT EEYORE
     if(output_format==Eeyore || output_format==AnalyzedEeyore) {
         ir_root->output_eeyore(output_buf);
 
-        for(const auto &s: output_buf)
-            fprintf(oj_out, "%s\n", s.c_str());
-
-        cleanup();
+        output_and_cleanup(output_buf);
         return 0;
     }
 
+    /// GEN INST
     auto *inst_root = new InstRoot();
     ir_root->gen_inst(inst_root);
 
+    /// OUTPUT TIGGER
     if(output_format==Tigger) {
         inst_root->output_tigger(output_buf);
 
-        for(const auto &s: output_buf)
-            fprintf(oj_out, "%s\n", s.c_str());
-
-        cleanup();
+        output_and_cleanup(output_buf);
         return 0;
     }
 
-    mainerror("asm not implemented");
+    /// OUTPUT ASM
+    if(output_format==Assembly) {
+        inst_root->output_asm(output_buf);
 
-    cleanup();
-    return 0;
+        output_and_cleanup(output_buf);
+        return 0;
+    }
+
+    mainerror("output format not selected");
 }

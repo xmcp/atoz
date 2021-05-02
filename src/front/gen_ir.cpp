@@ -169,7 +169,7 @@ void AstStmtIfOnly::gen_ir(IrFuncDef *func) {
 
     int lskip = func->gen_label();
     //outasm("if %s == 0 goto l%d // ifonly", tcond.eeyore_ref_local(), lskip);
-    func->push_stmt(new IrCondGoto(func, tcond, OpEq, RVal::asConstExp(0), lskip), "ifonly");
+    func->push_stmt(new IrCondGoto(func, tcond, RelEq, RVal::asConstExp(0), lskip), "ifonly");
 
     body->gen_ir(func);
     //outasm("l%d: // ifonly - lskip", lskip);
@@ -181,7 +181,7 @@ void AstStmtIfElse::gen_ir(IrFuncDef *func) {
 
     int lfalse = func->gen_label();
     //outasm("if %s == 0 goto l%d // ifelse", tcond.eeyore_ref_local(), lfalse);
-    func->push_stmt(new IrCondGoto(func, tcond, OpEq, RVal::asConstExp(0), lfalse), "ifelse");
+    func->push_stmt(new IrCondGoto(func, tcond, RelEq, RVal::asConstExp(0), lfalse), "ifelse");
 
     body_true->gen_ir(func);
     int ldone = func->gen_label();
@@ -205,7 +205,7 @@ void AstStmtWhile::gen_ir(IrFuncDef *func) {
 
     RVal tcond = cond->gen_rval(func);
     //outasm("if %s == 0 goto l%d // while - done", tcond.eeyore_ref_local(), ldone);
-    func->push_stmt(new IrCondGoto(func, tcond, OpEq, RVal::asConstExp(0), ldone), "while - done");
+    func->push_stmt(new IrCondGoto(func, tcond, RelEq, RVal::asConstExp(0), ldone), "while - done");
 
     body->gen_ir(func);
     //outasm("goto l%d // while - totest", ltest);
@@ -345,11 +345,11 @@ RVal AstExpOpBinary::gen_rval(IrFuncDef *func) {
 
         top1 = operand1->gen_rval(func);
         //outasm("if %s == 0 goto l%d // op and - test 1", top1.eeyore_ref_local(), lskip);
-        func->push_stmt(new IrCondGoto(func, top1, OpEq, RVal::asConstExp(0), lskip), "op and - test 1");
+        func->push_stmt(new IrCondGoto(func, top1, RelEq, RVal::asConstExp(0), lskip), "op and - test 1");
 
         top2 = operand2->gen_rval(func);
         //outasm("if %s == 0 goto l%d // op and - test 2", top2.eeyore_ref_local(), lskip);
-        func->push_stmt(new IrCondGoto(func, top2, OpEq, RVal::asConstExp(0), lskip), "op and - test 2");
+        func->push_stmt(new IrCondGoto(func, top2, RelEq, RVal::asConstExp(0), lskip), "op and - test 2");
 
         //outasm("t%d = 1 // op and - pass test", tret);
         func->push_stmt(new IrMov(func, tret, RVal::asConstExp(1)), "op and - passed test");
@@ -364,11 +364,11 @@ RVal AstExpOpBinary::gen_rval(IrFuncDef *func) {
 
         top1 = operand1->gen_rval(func);
         //outasm("if %s != 0 goto l%d // op or - test 1", top1.eeyore_ref_local(), lskip);
-        func->push_stmt(new IrCondGoto(func, top1, OpNeq, RVal::asConstExp(0), lskip), "op or - test 1");
+        func->push_stmt(new IrCondGoto(func, top1, RelNeq, RVal::asConstExp(0), lskip), "op or - test 1");
 
         top2 = operand2->gen_rval(func);
         //outasm("if %s != 0 goto l%d // op or - test 2", top2.eeyore_ref_local(), lskip);
-        func->push_stmt(new IrCondGoto(func, top2, OpNeq, RVal::asConstExp(0), lskip), "op or - test 2");
+        func->push_stmt(new IrCondGoto(func, top2, RelNeq, RVal::asConstExp(0), lskip), "op or - test 2");
 
         //outasm("t%d = 0 // op or - pass test", tret);
         func->push_stmt(new IrMov(func, tret, RVal::asConstExp(0)), "op or - passed test");

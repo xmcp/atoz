@@ -336,10 +336,10 @@ void IrCall::gen_inst(InstFuncDef *func) {
 }
 
 void IrReturnVoid::gen_inst(InstFuncDef *func) {
-    func->push_stmt(new InstRet());
+    func->push_stmt(new InstRet(func->stacksize));
 }
 
 void IrReturn::gen_inst(InstFuncDef *func) {
     func->push_stmt(new InstMov(Preg('a', 0), rload(retval, 1)));
-    func->push_stmt(new InstRet());
+    func->push_stmt(new InstRet(func->stacksize));
 }

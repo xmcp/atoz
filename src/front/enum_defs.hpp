@@ -37,6 +37,10 @@ enum BinaryOpKinds {
     OpAnd, OpOr // && ||
 };
 
+enum RelKinds { // can be represented by asm
+    RelLess, RelGreater, RelLeq, RelGeq, RelEq, RelNeq
+};
+
 // helper func to conver lexer type -> parser type
 
 inline UnaryOpKinds cvt_to_unary(LexTypeAdd op) {
@@ -106,6 +110,18 @@ inline string cvt_from_binary(BinaryOpKinds op) {
         case OpNeq: return "!=";
         case OpAnd: return "&&";
         case OpOr: return "||";
+        default: assert(false); return "";
+    }
+}
+
+inline string cvt_from_binary(RelKinds op) {
+    switch(op) {
+        case RelLess: return "<";
+        case RelGreater: return ">";
+        case RelLeq: return "<=";
+        case RelGeq: return ">=";
+        case RelEq: return "==";
+        case RelNeq: return "!=";
         default: assert(false); return "";
     }
 }

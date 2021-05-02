@@ -35,6 +35,7 @@ struct InstDeclScalar: Inst {
         globalidx(globalidx), initval(0) {}
 
     void output_tigger(list<string> &buf);
+    void output_asm(list<string> &buf);
 };
 
 struct InstDeclArray: Inst {
@@ -48,6 +49,7 @@ struct InstDeclArray: Inst {
     }
 
     void output_tigger(list<string> &buf);
+    void output_asm(list<string> &buf);
 };
 
 struct InstFuncDef: Inst {
@@ -64,6 +66,7 @@ struct InstFuncDef: Inst {
     }
 
     void output_tigger(list<string> &buf);
+    void output_asm(list<string> &buf);
 };
 
 struct InstRoot: Inst {
@@ -83,12 +86,14 @@ struct InstRoot: Inst {
     }
 
     void output_tigger(list<string> &buf);
+    void output_asm(list<string> &buf);
 };
 
 ///// STATEMENT
 
 struct InstStmt: Inst {
     virtual void output_tigger(list<string> &buf) = 0;
+    virtual void output_asm(list<string> &buf) = 0;
 };
 
 struct InstOpBinary: InstStmt {
@@ -101,6 +106,7 @@ struct InstOpBinary: InstStmt {
         dest(dest), operand1(operand1), op(op), operand2(operand2) {}
 
     void output_tigger(list<string> &buf) override;
+    void output_asm(list<string> &buf) override;
 };
 
 struct InstOpUnary: InstStmt {
@@ -112,6 +118,7 @@ struct InstOpUnary: InstStmt {
         dest(dest), op(op), operand(operand) {}
 
     void output_tigger(list<string> &buf) override;
+    void output_asm(list<string> &buf) override;
 };
 
 struct InstMov: InstStmt {
@@ -122,6 +129,7 @@ struct InstMov: InstStmt {
         dest(dest), src(src) {}
 
     void output_tigger(list<string> &buf) override;
+    void output_asm(list<string> &buf) override;
 };
 
 struct InstLoadImm: InstStmt {
@@ -132,6 +140,7 @@ struct InstLoadImm: InstStmt {
         dest(dest), imm(imm) {}
 
     void output_tigger(list<string> &buf) override;
+    void output_asm(list<string> &buf) override;
 };
 
 struct InstArraySet: InstStmt {
@@ -143,6 +152,7 @@ struct InstArraySet: InstStmt {
         dest(dest), doffset(doffset), src(src) {}
 
     void output_tigger(list<string> &buf) override;
+    void output_asm(list<string> &buf) override;
 };
 
 struct InstArrayGet: InstStmt {
@@ -154,18 +164,20 @@ struct InstArrayGet: InstStmt {
         dest(dest), src(src), soffset(soffset) {}
 
     void output_tigger(list<string> &buf) override;
+    void output_asm(list<string> &buf) override;
 };
 
 struct InstCondGoto: InstStmt {
     Preg operand1;
-    BinaryOpKinds op;
+    RelKinds op;
     Preg operand2;
     int label;
 
-    InstCondGoto(Preg operand1, BinaryOpKinds op, Preg operand2, int label):
+    InstCondGoto(Preg operand1, RelKinds op, Preg operand2, int label):
         operand1(operand1), op(op), operand2(operand2), label(label) {}
 
     void output_tigger(list<string> &buf) override;
+    void output_asm(list<string> &buf) override;
 };
 
 struct InstGoto: InstStmt {
@@ -175,6 +187,7 @@ struct InstGoto: InstStmt {
         label(label) {}
 
     void output_tigger(list<string> &buf) override;
+    void output_asm(list<string> &buf) override;
 };
 
 struct InstLabel: InstStmt {
@@ -184,6 +197,7 @@ struct InstLabel: InstStmt {
         label(label) {}
 
     void output_tigger(list<string> &buf) override;
+    void output_asm(list<string> &buf) override;
 };
 
 struct InstCall: InstStmt {
@@ -193,12 +207,16 @@ struct InstCall: InstStmt {
         name(name) {}
 
     void output_tigger(list<string> &buf) override;
+    void output_asm(list<string> &buf) override;
 };
 
 struct InstRet: InstStmt {
-    InstRet() {}
+    int fn_stacksize;
+    InstRet(int fn_stacksize):
+        fn_stacksize(fn_stacksize) {}
 
     void output_tigger(list<string> &buf) override;
+    void output_asm(list<string> &buf) override;
 };
 
 struct InstStoreStack: InstStmt {
@@ -209,6 +227,7 @@ struct InstStoreStack: InstStmt {
         stackidx(stackidx), src(src) {}
 
     void output_tigger(list<string> &buf) override;
+    void output_asm(list<string> &buf) override;
 };
 
 struct InstLoadStack: InstStmt {
@@ -219,6 +238,7 @@ struct InstLoadStack: InstStmt {
         dest(dest), stackidx(stackidx) {}
 
     void output_tigger(list<string> &buf) override;
+    void output_asm(list<string> &buf) override;
 };
 
 struct InstLoadGlobal: InstStmt {
@@ -229,6 +249,7 @@ struct InstLoadGlobal: InstStmt {
         dest(dest), globalidx(globalidx) {}
 
     void output_tigger(list<string> &buf) override;
+    void output_asm(list<string> &buf) override;
 };
 
 struct InstLoadAddrStack: InstStmt {
@@ -241,6 +262,7 @@ struct InstLoadAddrStack: InstStmt {
     }
 
     void output_tigger(list<string> &buf) override;
+    void output_asm(list<string> &buf) override;
 };
 
 struct InstLoadAddrGlobal: InstStmt {
@@ -251,6 +273,7 @@ struct InstLoadAddrGlobal: InstStmt {
         dest(dest), globalidx(globalidx) {}
 
     void output_tigger(list<string> &buf) override;
+    void output_asm(list<string> &buf) override;
 };
 
 struct InstComment: InstStmt {
@@ -260,4 +283,5 @@ struct InstComment: InstStmt {
         comment(comment) {}
 
     void output_tigger(list<string> &buf) override;
+    void output_asm(list<string> &buf) override;
 };
