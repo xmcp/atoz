@@ -50,7 +50,14 @@ void InstDeclArray::output_asm(list<string> &buf) {
 
 #define STK(stacksize) (((stacksize)/4 + 1) * 16)
 
+bool imm_overflows(int imm) {
+    return !!(imm>>11);
+}
+
 void InstFuncDef::output_asm(list<string> &buf) {
+    if(imm_overflows(STK(stacksize)))
+        assert(false);
+
     outasm("#--- FUNCTION %s", name.c_str());
     outasm("  .text");
     outasm("  .align  2");
@@ -58,8 +65,8 @@ void InstFuncDef::output_asm(list<string> &buf) {
     outasm("  .type   %s, @function", name.c_str());
     outasm("");
     outasm("%s:", name.c_str());
-    outasm("  addi    sp, sp, -%d", STK(stacksize)); // todo: deal with big numbers
-    outasm("  sw      ra, %d(sp)", STK(stacksize)-4); // todo: deal with big numbers
+    outasm("  sw      ra, -4(sp)");
+    outasm("  addi    sp, sp, -%d", STK(stacksize));
 
     for(auto stmt: stmts)
         stmt->output_asm(buf);
@@ -139,15 +146,23 @@ void InstMov::output_asm(list<string> &buf) {
 }
 
 void InstLoadImm::output_asm(list<string> &buf) {
-    outstmt("li %s, %d", tig(dest), imm); // todo: deal with big numbers
+    if(imm_overflows(imm))
+        assert(false);
+    outstmt("li %s, %d", tig(dest), imm);
 }
 
 void InstArraySet::output_asm(list<string> &buf) {
-    outstmt("sw %s, %d(%s)", tig(src), doffset, tig(dest)); // todo: deal with big numbers
+    if(imm_overflows(doffset))
+        assert(false);
+
+    outstmt("sw %s, %d(%s)", tig(src), doffset, tig(dest));
 }
 
 void InstArrayGet::output_asm(list<string> &buf) {
-    outstmt("lw %s, %d(%s)", tig(dest), soffset, tig(src)); // todo: deal with big numbers
+    if(imm_overflows(soffset))
+        assert(false);
+
+    outstmt("lw %s, %d(%s)", tig(dest), soffset, tig(src));
 }
 
 void InstCondGoto::output_asm(list<string> &buf) {
@@ -189,17 +204,26 @@ void InstCall::output_asm(list<string> &buf) {
 }
 
 void InstRet::output_asm(list<string> &buf) {
-    outstmt("lw ra, %d(sp)", STK(fn_stacksize)-4); // todo: deal with big numbers
-    outstmt("addi sp, sp, %d", STK(fn_stacksize)); // todo: deal with big numbers
+    if(imm_overflows(STK(fn_stacksize)))
+        assert(false);
+
+    outstmt("addi sp, sp, %d", STK(fn_stacksize));
+    outstmt("lw ra, %d(sp)", -4);
     outstmt("ret");
 }
 
 void InstStoreStack::output_asm(list<string> &buf) {
-    outstmt("sw %s, %d(sp)", tig(src), stackidx*4); // todo: deal with big numbers
+    if(imm_overflows(stackidx*4))
+        assert(false);
+
+    outstmt("sw %s, %d(sp)", tig(src), stackidx*4);
 }
 
 void InstLoadStack::output_asm(list<string> &buf) {
-    outstmt("lw %s, %d(sp)", tig(dest), stackidx*4); // todo: deal with big numbers
+    if(imm_overflows(stackidx*4))
+        assert(false);
+
+    outstmt("lw %s, %d(sp)", tig(dest), stackidx*4);
 }
 
 void InstLoadGlobal::output_asm(list<string> &buf) {
@@ -208,7 +232,10 @@ void InstLoadGlobal::output_asm(list<string> &buf) {
 }
 
 void InstLoadAddrStack::output_asm(list<string> &buf) {
-    outstmt("addi %s, sp, %d", tig(dest), stackidx*4); // todo: deal with big numbers
+    if(imm_overflows(stackidx*4))
+        assert(false);
+
+    outstmt("addi %s, sp, %d", tig(dest), stackidx*4);
 }
 
 void InstLoadAddrGlobal::output_asm(list<string> &buf) {
