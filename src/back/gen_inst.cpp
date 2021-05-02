@@ -201,8 +201,8 @@ void IrArraySet::gen_inst(InstFuncDef *func) {
 
             case DefLocal:
                 assert(this->func->get_vreg(dest).pos==Vreg::VregInStack);
-                func->push_stmt(new InstLoadAddrStack(tmpreg0, this->func->get_vreg(dest).spilloffset));
-                func->push_stmt(new InstArraySet(tmpreg0, doffset, rload(src, 1)));
+                func->push_stmt(new InstLoadAddrStack(tmpreg0, this->func->get_vreg(dest).spilloffset + doffset/4));
+                func->push_stmt(new InstArraySet(tmpreg0, 0, rload(src, 1)));
                 break;
 
             case DefArg:
