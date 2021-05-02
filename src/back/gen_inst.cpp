@@ -2,7 +2,7 @@
 #include "ir.hpp"
 #include "../front/ast.hpp"
 
-const bool INST_GEN_COMMENTS = false;
+const bool INST_GEN_COMMENTS = true;
 
 void warn_dest_not_used(LVal v, string funcname) {
     printf("warning: unused dest value ");

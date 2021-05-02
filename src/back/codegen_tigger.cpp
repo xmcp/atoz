@@ -5,7 +5,7 @@ const int TIGGER_INST_BUFSIZE = 512;
 static char instbuf[TIGGER_INST_BUFSIZE];
 
 #define outasm(...) do { \
-    sprintf(instbuf, __VA_ARGS__); \
+    sprintf_s(instbuf, sizeof(instbuf), __VA_ARGS__); \
     buf.push_back(string(instbuf)); \
 } while(0)
 

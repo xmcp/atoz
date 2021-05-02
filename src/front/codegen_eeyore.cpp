@@ -83,7 +83,7 @@ string LVal::eeyore_ref_local(IrFuncDef *func) {
 #undef cdef
 
 #define outasm(...) do { \
-    sprintf(instbuf, __VA_ARGS__); \
+    sprintf_s(instbuf, sizeof(instbuf), __VA_ARGS__); \
     buf.push_back(string(instbuf)); \
 } while(0)
 
@@ -92,7 +92,7 @@ string LVal::eeyore_ref_local(IrFuncDef *func) {
 } while(0)
 
 #define outcomment(fmt, ...) do { \
-    sprintf(instbuf, "%s // " fmt, buf.back().c_str(), __VA_ARGS__); \
+    sprintf_s(instbuf, sizeof(instbuf), "%s // " fmt, buf.back().c_str(), __VA_ARGS__); \
     buf.pop_back(); \
     buf.push_back(string(instbuf)); \
 } while(0)
