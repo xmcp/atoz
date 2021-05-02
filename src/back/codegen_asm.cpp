@@ -202,7 +202,7 @@ void InstCall::output_asm(list<string> &buf) {
 void InstRet::output_asm(list<string> &buf) {
     if(imm_overflows(STK(fn_stacksize))) {
         outstmt("li t0, %d", STK(fn_stacksize));
-        outstmt("add sp, t0");
+        outstmt("add sp, sp, t0");
     } else {
         outstmt("addi sp, sp, %d", STK(fn_stacksize));
     }

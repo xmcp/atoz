@@ -36,7 +36,7 @@ void IrRoot::gen_inst(InstRoot *root) {
 
         // t0 stores global ptr (t1 for temp if index overflows), a0 stores offset
 
-        // BELOW STMTS IN REVERSED ORDER, because of `push_front`
+//----- BELOW: STMTS IN REVERSED ORDER, because of `push_front`
 
         for(auto kvpair: arrdecl_pair.second->initval) { // offset bytes -> val
             if(imm_overflows(kvpair.first)) {
@@ -50,7 +50,7 @@ void IrRoot::gen_inst(InstRoot *root) {
         }
 /* ↑ */ root->mainfunc->stmts.push_front(new InstLoadAddrGlobal(tmpreg0, arrdecl_pair.first));
 
-        // ABOVE STMTS IN REVERSED ORDER
+//----- ABOVE: STMTS IN REVERSED ORDER
     }
 }
 
