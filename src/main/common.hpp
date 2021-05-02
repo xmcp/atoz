@@ -11,6 +11,7 @@ inline void myassert_fail(int line, const char *fn) {
 #define assert(x) do {if(!(x)) myassert_fail(__LINE__, __FILE__);} while(0)
 
 inline bool imm_overflows(int imm) {
+    return imm<=-2047 || imm>=2047;
     return !!(imm>>11);
 }
 

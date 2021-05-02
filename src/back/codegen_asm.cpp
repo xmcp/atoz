@@ -208,7 +208,7 @@ void InstRet::output_asm(list<string> &buf) {
         outstmt("addi sp, sp, %d", STK(fn_stacksize));
     }
 
-    outstmt("lw ra, %d(sp)", -4);
+    outstmt("lw ra, -4(sp)");
     outstmt("ret");
 }
 
