@@ -2,10 +2,7 @@
 #include "ir.hpp"
 #include "../front/ast.hpp"
 
-#include <exception>
-using std::exception;
-
-const bool INST_GEN_COMMENTS = true;
+const bool INST_GEN_COMMENTS = false;
 
 void warn_dest_not_used(LVal v, string funcname) {
     printf("warning: unused dest value ");
@@ -73,6 +70,13 @@ void IrInit::gen_inst_global(InstRoot *root) {
 void IrFuncDef::gen_inst(InstRoot *root) {
     auto func = new InstFuncDef(name, params->val.size(), spillsize+callersavesize);
     root->push_func(func);
+
+    if(INST_GEN_COMMENTS) {
+        string s = "DESTROYS:";
+        for(Preg reg: this->root->get_destroy_set(name))
+            s += " " + reg.tigger_ref();
+        func->push_stmt(new InstComment(s));
+    }
 
     if(name=="main")
         root->mainfunc = func;

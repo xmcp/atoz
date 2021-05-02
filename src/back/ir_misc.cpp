@@ -114,6 +114,10 @@ void IrFuncDef::report_destroyed_set() {
     for(int i=0; i<(int)params->val.size(); i++)
         destory_set.insert(Preg('a', i));
 
+    // destroyed because we will return value
+    if(type!=FuncVoid)
+        destory_set.insert(Preg('a', 0));
+
     // insert it first, therefore we can get it if the function recurses
     root->destroy_sets.insert(make_pair(name, destory_set));
 
