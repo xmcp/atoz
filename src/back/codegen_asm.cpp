@@ -72,41 +72,41 @@ void InstFuncDef::output_asm(list<string> &buf) {
 void InstOpBinary::output_asm(list<string> &buf) {
     switch(op) {
         case OpPlus:
-            outstmt("add %s %s %s", tig(dest), tig(operand1), tig(operand2));
+            outstmt("add %s, %s, %s", tig(dest), tig(operand1), tig(operand2));
             break;
         case OpMinus:
-            outstmt("sub %s %s %s", tig(dest), tig(operand1), tig(operand2));
+            outstmt("sub %s, %s, %s", tig(dest), tig(operand1), tig(operand2));
             break;
         case OpMul:
-            outstmt("mul %s %s %s", tig(dest), tig(operand1), tig(operand2));
+            outstmt("mul %s, %s, %s", tig(dest), tig(operand1), tig(operand2));
             break;
         case OpDiv:
-            outstmt("div %s %s %s", tig(dest), tig(operand1), tig(operand2));
+            outstmt("div %s, %s, %s", tig(dest), tig(operand1), tig(operand2));
             break;
         case OpMod:
-            outstmt("rem %s %s %s", tig(dest), tig(operand1), tig(operand2));
+            outstmt("rem %s, %s, %s", tig(dest), tig(operand1), tig(operand2));
             break;
         case OpLess:
-            outstmt("slt %s %s %s", tig(dest), tig(operand1), tig(operand2));
+            outstmt("slt %s, %s, %s", tig(dest), tig(operand1), tig(operand2));
             break;
         case OpGreater:
-            outstmt("sgt %s %s %s", tig(dest), tig(operand1), tig(operand2));
+            outstmt("sgt %s, %s, %s", tig(dest), tig(operand1), tig(operand2));
             break;
         case OpLeq:
-            outstmt("sgt %s %s %s", tig(dest), tig(operand1), tig(operand2));
-            outstmt("seqz %s %s", tig(dest), tig(dest));
+            outstmt("sgt %s, %s, %s", tig(dest), tig(operand1), tig(operand2));
+            outstmt("seqz %s, %s", tig(dest), tig(dest));
             break;
         case OpGeq:
-            outstmt("slt %s %s %s", tig(dest), tig(operand1), tig(operand2));
-            outstmt("seqz %s %s", tig(dest), tig(dest));
+            outstmt("slt %s, %s, %s", tig(dest), tig(operand1), tig(operand2));
+            outstmt("seqz %s, %s", tig(dest), tig(dest));
             break;
         case OpEq:
-            outstmt("xor %s %s %s", tig(dest), tig(operand1), tig(operand2));
-            outstmt("seqz %s %s", tig(dest), tig(dest));
+            outstmt("xor %s, %s, %s", tig(dest), tig(operand1), tig(operand2));
+            outstmt("seqz %s, %s", tig(dest), tig(dest));
             break;
         case OpNeq:
-            outstmt("xor %s %s %s", tig(dest), tig(operand1), tig(operand2));
-            outstmt("snez %s %s", tig(dest), tig(dest));
+            outstmt("xor %s, %s, %s", tig(dest), tig(operand1), tig(operand2));
+            outstmt("snez %s, %s", tig(dest), tig(dest));
             break;
         case OpAnd:
         case OpOr:
@@ -231,7 +231,7 @@ void InstComment::output_asm(list<string> &buf) {
     if(comment.empty())
         outasm("");
     else
-        outasm("# %s", str_replace(comment, "//", "#").c_str());
+        outasm("# _ %s", str_replace(comment, "//", "# _").c_str());
 }
 
 #undef tig

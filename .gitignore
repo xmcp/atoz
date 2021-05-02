@@ -7,3 +7,6 @@ __pycache__/
 CMakeLists.txt
 /test/out.S
 /test/src.c
+/test/docker_share/input.txt
+/test/docker_share/out.bin
+/test/docker_share/out.S
