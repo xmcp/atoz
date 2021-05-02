@@ -42,7 +42,6 @@ struct Ast: GarbageCollectable {
     NodeLocation loc;
 
     Ast(): GarbageCollectable(), loc() {}
-    virtual ~Ast() = default;
 };
 
 struct ConstExpResult {

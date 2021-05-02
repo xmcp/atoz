@@ -11,6 +11,7 @@ struct GarbageCollectable {
     GarbageCollectable() {
         allocated_ptrs.push_back(this);
     }
+    virtual ~GarbageCollectable() = default;
 
     static void delete_all() {
         for(auto ptr: allocated_ptrs)

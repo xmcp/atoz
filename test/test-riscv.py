@@ -43,7 +43,7 @@ for p in tqdm(sorted(list(pathlib.Path('.').glob('testcases/**/func*/*.sy')))):
         f' --rm'
         f' riscv-dev-env'
         f' /tmp/hostshare/judge.sh'
-    , 10, '')
+    , 30, '')
     out = (out.strip()+'\n'+str(errno)).lstrip()
 
     if out.strip()!=stdres.strip():

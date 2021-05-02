@@ -42,7 +42,6 @@ string demystify_reguid(int uid);
 
 struct Ir: GarbageCollectable {
     Ir(): GarbageCollectable() {}
-    virtual ~Ir() = default;
 };
 
 struct LVal {

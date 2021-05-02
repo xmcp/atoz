@@ -15,7 +15,7 @@ def run_cmd(cmdline, timeout_sec, inp): # errno, stdout, stderr
         p.kill()
         run_cmd('killall minivm', None, '') # sometimes minivm fails to stop
         pout, perr = p.communicate(timeout=timeout_sec)
-        errcode = -1
+        errcode = -111111
 
     return errcode, pout.decode('utf-8', 'replace'), perr.decode('utf-8', 'replace')
 

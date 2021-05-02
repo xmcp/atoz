@@ -22,7 +22,6 @@ struct InstStmt;
 
 struct Inst: GarbageCollectable {
     Inst(): GarbageCollectable() {}
-    virtual ~Inst() = default;
 };
 
 ///// LANGUAGE CONSTRUCTS
