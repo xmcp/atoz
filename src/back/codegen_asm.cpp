@@ -58,8 +58,8 @@ void InstFuncDef::output_asm(list<string> &buf) {
     outasm("  .type   %s, @function", name.c_str());
     outasm("");
     outasm("%s:", name.c_str());
-    outasm("  addi    sp, sp, -%d", STK(stacksize));
-    outasm("  sw      ra, %d(sp)", STK(stacksize)-4);
+    outasm("  addi    sp, sp, -%d", STK(stacksize)); // todo: deal with big numbers
+    outasm("  sw      ra, %d(sp)", STK(stacksize)-4); // todo: deal with big numbers
 
     for(auto stmt: stmts)
         stmt->output_asm(buf);
@@ -139,15 +139,15 @@ void InstMov::output_asm(list<string> &buf) {
 }
 
 void InstLoadImm::output_asm(list<string> &buf) {
-    outstmt("li %s, %d", tig(dest), imm);
+    outstmt("li %s, %d", tig(dest), imm); // todo: deal with big numbers
 }
 
 void InstArraySet::output_asm(list<string> &buf) {
-    outstmt("sw %s, %d(%s)", tig(src), doffset, tig(dest));
+    outstmt("sw %s, %d(%s)", tig(src), doffset, tig(dest)); // todo: deal with big numbers
 }
 
 void InstArrayGet::output_asm(list<string> &buf) {
-    outstmt("lw %s, %d(%s)", tig(dest), soffset, tig(src));
+    outstmt("lw %s, %d(%s)", tig(dest), soffset, tig(src)); // todo: deal with big numbers
 }
 
 void InstCondGoto::output_asm(list<string> &buf) {
@@ -189,17 +189,17 @@ void InstCall::output_asm(list<string> &buf) {
 }
 
 void InstRet::output_asm(list<string> &buf) {
-    outstmt("lw ra, %d(sp)", STK(fn_stacksize)-4);
-    outstmt("addi sp, sp, %d", STK(fn_stacksize));
+    outstmt("lw ra, %d(sp)", STK(fn_stacksize)-4); // todo: deal with big numbers
+    outstmt("addi sp, sp, %d", STK(fn_stacksize)); // todo: deal with big numbers
     outstmt("ret");
 }
 
 void InstStoreStack::output_asm(list<string> &buf) {
-    outstmt("sw %s, %d(sp)", tig(src), stackidx*4);
+    outstmt("sw %s, %d(sp)", tig(src), stackidx*4); // todo: deal with big numbers
 }
 
 void InstLoadStack::output_asm(list<string> &buf) {
-    outstmt("lw %s, %d(sp)", tig(dest), stackidx*4);
+    outstmt("lw %s, %d(sp)", tig(dest), stackidx*4); // todo: deal with big numbers
 }
 
 void InstLoadGlobal::output_asm(list<string> &buf) {
@@ -208,7 +208,7 @@ void InstLoadGlobal::output_asm(list<string> &buf) {
 }
 
 void InstLoadAddrStack::output_asm(list<string> &buf) {
-    outstmt("addi %s, sp, %d", tig(dest), stackidx*4);
+    outstmt("addi %s, sp, %d", tig(dest), stackidx*4); // todo: deal with big numbers
 }
 
 void InstLoadAddrGlobal::output_asm(list<string> &buf) {
