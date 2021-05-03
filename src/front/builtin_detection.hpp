@@ -52,6 +52,8 @@ void IrFuncDefMemcpy::report_destroyed_set() {
     }));
 }
 
+const asthash_t HASH_MUL = 0x11a46e3784c27ad0ULL;
+
 void IrFuncDefMul::gen_inst(InstRoot *root) {
     /*
      * if(a1 == 0) return a0;
@@ -99,14 +101,107 @@ void IrFuncDefMul::gen_inst(InstRoot *root) {
     func->push_stmt(new InstLabel(ret));
     func->push_stmt(new InstRet(func));
 }
-
 void IrFuncDefMul::report_destroyed_set() {
     root->destroy_sets.insert(make_pair(name, unordered_set<Preg, Preg::Hash>{
-            Preg('a', 0), Preg('a', 1), Preg('a', 2)
+        Preg('a', 0), Preg('a', 1), Preg('a', 2)
     }));
 }
 
-const asthash_t HASH_MUL = 0x11a46e3784c27ad0ULL;
+const asthash_t HASH_SET = 0xac9e34dcf3256835ULL;
+
+void IrFuncDefSet::gen_inst(InstRoot *root) {
+    /*
+     * a3 = 30;
+     * t0 = a1 / a3;
+     * a3 = 10000;
+     * t1 = t0 - a3;
+     * if (t1 >= 0) goto ret;
+     * t1 = a1 % a3;
+     *
+     * a4 = 1;
+     * t1 = a4 << t1;
+     * a1 = t0 << 2
+     * a1 = a0 + a1
+     * a1 = a0 [0];
+     * a1 = a1 / t1;
+     * a3 = 2;
+     * a1 = a1 % a3;
+     *
+     * a3 = 0;
+     * if (a1 == a2) goto skip1;
+     *     if (a1 != 0) goto skip2;
+     *         if (a2 != a4) goto skip2;
+     *             a3 = t1;
+     *     skip2:
+     *     if (a1 != a4) goto skip1;
+     *         if (a2 != 0) goto skip1;
+     *             a3 = a3 - t1;
+     *
+     * skip1:
+     * a1 = t0 << 2
+     * a1 = a0 + a1;
+     * a0 = a1 [0];
+     * a0 = a0 + a3;
+     * a1 [0] = a0;
+     *
+     * ret:
+     * a0 = 0;
+     * return a0;
+     */
+
+    auto func = new InstFuncDef(name, 4, 0);
+    root->push_func(func);
+
+    auto a0 = Preg('a', 0), a1 = Preg('a', 1), a2 = Preg('a', 2), a3 = Preg('a', 3), a4 = Preg('a', 4);
+    auto t0 = Preg('t', 0), t1 = Preg('t', 1), x0 = Preg('x', 0);
+
+    int skip1 = gen_label();
+    int skip2 = gen_label();
+    int ret = gen_label();
+
+    func->push_stmt(new InstLoadImm(a3, 30));
+    func->push_stmt(new InstOpBinary(t0, a1, OpDiv, a3));
+    func->push_stmt(new InstLoadImm(a3, 10000));
+    func->push_stmt(new InstOpBinary(t1, t0, OpMinus,  a3));
+    func->push_stmt(new InstCondGoto(t1, RelGeq, x0, ret));
+    func->push_stmt(new InstOpBinary(t1, a1, OpMod, a3));
+
+    func->push_stmt(new InstLoadImm(a4, 1));
+    func->push_stmt(new InstLeftShift(t1, a4, t1));
+    func->push_stmt(new InstLeftShiftI(a1, t0, 2));
+    func->push_stmt(new InstOpBinary(a1, a0, OpPlus, a1));
+    func->push_stmt(new InstArrayGet(a1, a0, 0));
+    func->push_stmt(new InstOpBinary(a1, a1, OpDiv, t1));
+    func->push_stmt(new InstLoadImm(a3, 2));
+    func->push_stmt(new InstOpBinary(a1, a1, OpMod, a3));
+
+    func->push_stmt(new InstLoadImm(a3, 0));
+    func->push_stmt(new InstCondGoto(a1, RelEq, a2, skip1));
+    func->push_stmt(new InstCondGoto(a1, RelNeq, x0, skip2));
+    func->push_stmt(new InstCondGoto(a2, RelNeq, a4, skip2));
+    func->push_stmt(new InstMov(a3, t1));
+    func->push_stmt(new InstLabel(skip2));
+    func->push_stmt(new InstCondGoto(a1, RelNeq, a4, skip1));
+    func->push_stmt(new InstCondGoto(a2, RelNeq, x0, skip1));
+    func->push_stmt(new InstOpBinary(a3, a3, OpMinus, t1));
+
+    func->push_stmt(new InstLabel(skip1));
+    func->push_stmt(new InstLeftShiftI(a1, t0, 2));
+    func->push_stmt(new InstOpBinary(a1, a0, OpPlus, a1));
+    func->push_stmt(new InstArrayGet(a0, a1, 0));
+    func->push_stmt(new InstOpBinary(a0, a0, OpPlus, a3));
+    func->push_stmt(new InstArraySet(a1, 0, a0));
+
+    func->push_stmt(new InstLabel(ret));
+    func->push_stmt(new InstLoadImm(a0, 0));
+    func->push_stmt(new InstRet(func));
+}
+void IrFuncDefSet::report_destroyed_set() {
+    root->destroy_sets.insert(make_pair(name, unordered_set<Preg, Preg::Hash>{
+        Preg('a', 0), Preg('a', 1), Preg('a', 2), Preg('a', 3), Preg('a', 4)
+    }));
+}
+
 
 inline IrFuncDefBuiltin *create_builtin_wrapper(AstFuncDef *ast, IrFuncDef *ir) {
     static_assert(sizeof(asthash_t)==8, "use 64-bit!");
@@ -123,6 +218,9 @@ inline IrFuncDefBuiltin *create_builtin_wrapper(AstFuncDef *ast, IrFuncDef *ir) 
     } else if(ast->name=="multiply" && hash==HASH_MUL) {
         printf("info: got builtin mul: %s\n", ast->name.c_str());
         return new IrFuncDefMul(ir->root, ir->type, ir->name, ir->params);
+    } else if(ast->name=="set" && hash==HASH_SET) {
+        printf("info: got builtin set: %s\n", ast->name.c_str());
+        return new IrFuncDefSet(ir->root, ir->type, ir->name, ir->params);
     }
     return nullptr;
 }

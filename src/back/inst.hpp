@@ -322,3 +322,15 @@ struct InstLeftShiftI: InstStmt {
     void output_tigger(list<string> &buf) override;
     void output_asm(list<string> &buf) override;
 };
+
+struct InstLeftShift: InstStmt {
+    Preg dest;
+    Preg operand1;
+    Preg operand2;
+
+    InstLeftShift(Preg dest, Preg operand1, Preg operand2):
+        dest(dest), operand1(operand1), operand2(operand2) {}
+
+    void output_tigger(list<string> &buf) override;
+    void output_asm(list<string> &buf) override;
+};

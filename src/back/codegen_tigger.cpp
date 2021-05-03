@@ -133,6 +133,11 @@ void InstLeftShiftI::output_tigger(list<string> &buf) {
         outstmt("%s = %s // shift 0", tig(dest), tig(operand1));
 }
 
+void InstLeftShift::output_tigger(list<string> &buf) {
+    // tigger does not support this
+    outstmt("!! %s = %s << %s", tig(dest), tig(operand1), tig(operand2));
+}
+
 #undef tig
 #undef outasm
 

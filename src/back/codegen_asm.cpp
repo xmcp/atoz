@@ -300,6 +300,10 @@ void InstLeftShiftI::output_asm(list<string> &buf) {
         outstmt("#mv %s, %s # shift self 0", tig(dest), tig(operand1));
 }
 
+void InstLeftShift::output_asm(list<string> &buf) {
+    outstmt("sll %s, %s, %s", tig(dest), tig(operand1), tig(operand2));
+}
+
 #undef tig
 #undef outasm
 

@@ -624,3 +624,11 @@ struct IrFuncDefMul: IrFuncDefBuiltin {
     void gen_inst(InstRoot *root) override;
     void report_destroyed_set() override;
 };
+
+struct IrFuncDefSet: IrFuncDefBuiltin {
+    IrFuncDefSet(IrRoot *root, FuncType type, string name, AstFuncDefParams *params):
+        IrFuncDefBuiltin(root, type, name, params) {}
+
+    void gen_inst(InstRoot *root) override;
+    void report_destroyed_set() override;
+};
