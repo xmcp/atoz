@@ -81,9 +81,9 @@ void IrFuncDefMul::gen_inst(InstRoot *root) {
     int ret = gen_label();
 
     func->push_stmt(new InstComment("builtin mul"));
-    func->push_stmt(new InstCondGoto(a1, RelEq, x0, ret));
     func->push_stmt(new InstMov(t0, a0));
     func->push_stmt(new InstLoadImm(a0, 0));
+    func->push_stmt(new InstCondGoto(a1, RelEq, x0, ret));
     func->push_stmt(new InstLoadImm(a2, 998244353));
     func->push_stmt(new InstLabel(loop));
     func->push_stmt(new InstLeftShiftI(t1, a1, 31));
