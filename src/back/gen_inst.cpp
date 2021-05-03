@@ -103,8 +103,12 @@ void IrFuncDef::gen_inst(InstRoot *root) {
 Preg fn_rload(RVal v, int idx, IrFuncDef *irfunc, InstFuncDef *instfunc) {
     Preg reg = Preg('t', idx);
     if(v.type==RVal::ConstExp) { // const
-        instfunc->push_stmt(new InstLoadImm(reg, v.val.constexp));
-        return reg;
+        if(v.val.constexp==0) // consider hard-wired 0
+            return Preg('x', 0);
+        else {
+            instfunc->push_stmt(new InstLoadImm(reg, v.val.constexp));
+            return reg;
+        }
     } else if(v.type==RVal::Reference && v.val.reference->pos==DefGlobal) { // ref global
         instfunc->push_stmt(new InstLoadGlobal(reg, v.val.reference->index));
         return reg;
@@ -144,30 +148,41 @@ void fn_dostore(LVal v, IrFuncDef *irfunc, InstFuncDef *instfunc) {
 void IrOpBinary::gen_inst(InstFuncDef *func) {
     ret_if_unused(dest);
 
+    Preg regop1 = Preg('x', 0);
+
     if(operand1.type==RVal::Reference && operand1.val.reference->idxinfo->dims()>0) {
         // pointer math, e.g. ptr = arr + idx
         switch(operand1.val.reference->pos) {
             case DefGlobal:
                 func->push_stmt(new InstLoadAddrGlobal(tmpreg0, operand1.val.reference->index));
-                func->push_stmt(new InstOpBinary(rstore(dest), tmpreg0, op, rload(operand2, 1)));
+                regop1 = tmpreg0;
                 break;
 
             case DefLocal:
                 assert(this->func->get_vreg(operand1).pos==Vreg::VregInStack);
                 func->push_stmt(new InstLoadAddrStack(tmpreg0, this->func->get_vreg(operand1).spilloffset));
-                func->push_stmt(new InstOpBinary(rstore(dest), tmpreg0, op, rload(operand2, 1)));
+                regop1 = tmpreg0;
                 break;
 
             case DefArg:
                 assert(this->func->get_vreg(operand1).pos==Vreg::VregInReg);
-                func->push_stmt(new InstOpBinary(rstore(dest), this->func->get_vreg(operand1).reg, op, rload(operand2, 1)));
+                regop1 = this->func->get_vreg(operand1).reg;
                 break;
 
             default:
                 assert(false);
         }
     } else {
-        func->push_stmt(new InstOpBinary(rstore(dest), rload(operand1, 0), op, rload(operand2, 1)));
+        regop1 = rload(operand1, 0);
+    }
+
+    if(op==OpPlus && operand2.type==RVal::ConstExp && !imm_overflows(operand2.val.constexp)) {
+        // can be simplified into addi
+        func->push_stmt(new InstAddI(rstore(dest), regop1, operand2.val.constexp));
+    } else {
+        // normal reg-reg add
+        Preg regop2 = rload(operand2, 1);
+        func->push_stmt(new InstOpBinary(rstore(dest), regop1, op, regop2));
     }
     dostore(dest);
 }
@@ -354,4 +369,31 @@ void IrReturnVoid::gen_inst(InstFuncDef *func) {
 void IrReturn::gen_inst(InstFuncDef *func) {
     func->push_stmt(new InstMov(Preg('a', 0), rload(retval, 1)));
     func->push_stmt(new InstRet(func->stacksize));
+}
+
+void IrLocalArrayFillZero::gen_inst(InstFuncDef *func) {
+    /* # Fill `array` of `totelems` with zeros
+     * t0 = array
+     * t1 = totelems
+     * loop:
+     * t0 [0] = 0
+     * t1 = t1 - 1
+     * t0 = t0 + 4
+     * if t1>0 goto loop
+     */
+
+    assert(dest.type==LVal::Reference);
+    assert(this->func->get_vreg(dest).pos==Vreg::VregInStack);
+    int stackpos = this->func->get_vreg(dest).spilloffset;
+    int looplabel = this->func->gen_label();
+    int totelems = dest.val.reference->initval.totelems;
+    assert(totelems>0);
+
+    func->push_stmt(new InstLoadAddrStack(Preg('t', 0), stackpos));
+    func->push_stmt(new InstLoadImm(Preg('t', 1), totelems));
+    func->push_stmt(new InstLabel(looplabel));
+    func->push_stmt(new InstArraySet(Preg('t', 0), 0, Preg('x', 0)));
+    func->push_stmt(new InstAddI(Preg('t', 1), Preg('t', 1), -1));
+    func->push_stmt(new InstAddI(Preg('t', 0), Preg('t', 0), 4));
+    func->push_stmt(new InstCondGoto(Preg('t', 1), RelGreater, Preg('x', 0), looplabel));
 }

@@ -246,4 +246,8 @@ void IrLabelReturn::output_eeyore(list<string> &buf) {
 }
 */
 
+void IrLocalArrayFillZero::output_eeyore(list<string> &buf) {
+    outstmt("//[ local_array_fill_zero %s ]", eey(dest));
+}
+
 #undef eey

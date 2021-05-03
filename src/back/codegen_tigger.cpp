@@ -117,6 +117,10 @@ void InstComment::output_tigger(list<string> &buf) {
         outasm("// %s", comment.c_str());
 }
 
+void InstAddI::output_tigger(list<string> &buf) {
+    outstmt("%s = %s + %d", tig(dest), tig(operand1), operand2);
+}
+
 #undef tig
 #undef outasm
 

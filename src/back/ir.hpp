@@ -548,3 +548,22 @@ struct IrLabelReturn: IrLabel {
     }
 };
 */
+
+struct IrLocalArrayFillZero: IrStmt {
+    LVal dest;
+
+    IrLocalArrayFillZero(IrFuncDef *func, LVal dest): IrStmt(func),
+        dest(dest) {
+        assert(dest.type==LVal::Reference);
+    }
+
+    void output_eeyore(list<string> &buf) override;
+    void gen_inst(InstFuncDef *func) override;
+
+    // cfg
+    vector<int> uses() override {
+        auto v = vector<int>();
+        push_if_pooled(dest);
+        return v;
+    }
+};

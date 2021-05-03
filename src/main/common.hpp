@@ -12,7 +12,6 @@ inline void myassert_fail(int line, const char *fn) {
 
 inline bool imm_overflows(int imm) {
     return imm<=-2047 || imm>=2047;
-    return !!(imm>>11);
 }
 
 #define outasm(...) do { \

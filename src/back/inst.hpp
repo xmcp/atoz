@@ -290,3 +290,17 @@ struct InstComment: InstStmt {
     void output_tigger(list<string> &buf) override;
     void output_asm(list<string> &buf) override;
 };
+
+struct InstAddI: InstStmt {
+    Preg dest;
+    Preg operand1;
+    int operand2;
+
+    InstAddI(Preg dest, Preg operand1, int operand2):
+        dest(dest), operand1(operand1), operand2(operand2) {
+        assert(!imm_overflows(operand2));
+    }
+
+    void output_tigger(list<string> &buf) override;
+    void output_asm(list<string> &buf) override;
+};

@@ -248,7 +248,6 @@ void InstLoadAddrStack::output_asm(list<string> &buf) {
     } else {
         outstmt("addi %s, sp, %d", tig(dest), stackidx*4);
     }
-
 }
 
 void InstLoadAddrGlobal::output_asm(list<string> &buf) {
@@ -272,6 +271,10 @@ void InstComment::output_asm(list<string> &buf) {
         outasm("");
     else
         outasm("# _ %s", str_replace(comment, "//", "# _").c_str());
+}
+
+void InstAddI::output_asm(list<string> &buf) {
+    outstmt("addi %s, %s, %d", tig(dest), tig(operand1), operand2);
 }
 
 #undef tig

@@ -66,17 +66,21 @@ void AstDef::gen_ir_init_local(IrFuncDef *func) {
             func->push_stmt(new IrMov(func, this, trval), name);
         }
     } else { // array
-        for(int i=0; i<initval.totelems; i++)
-            if(initval.value[i] != nullptr) {
-                RVal trval = initval.value[i]->gen_rval(func);
-                if(imm_overflows(i*4)) { // calc ptr then set into ptr
-                    LVal ptr = func->gen_scalar_tempvar();
-                    func->push_stmt(new IrOpBinary(func, ptr, this, OpPlus, RVal::asConstExp(i*4)));
-                    func->push_stmt(new IrArraySet(func, ptr, 0, trval), name);
-                } else { // directly set into array
-                    func->push_stmt(new IrArraySet(func, this, i*4, trval), name);
+        if(ast_initval_or_null!=nullptr) {
+            func->push_stmt(new IrLocalArrayFillZero(func, this));
+
+            for(int i=0; i<initval.totelems; i++)
+                if(initval.value[i] != nullptr) {
+                    RVal trval = initval.value[i]->gen_rval(func);
+                    if(imm_overflows(i*4)) { // calc ptr then set into ptr
+                        LVal ptr = func->gen_scalar_tempvar();
+                        func->push_stmt(new IrOpBinary(func, ptr, this, OpPlus, RVal::asConstExp(i*4)));
+                        func->push_stmt(new IrArraySet(func, ptr, 0, trval), name);
+                    } else { // directly set into array
+                        func->push_stmt(new IrArraySet(func, this, i*4, trval), name);
+                    }
                 }
-            }
+        }
     }
 }
 
