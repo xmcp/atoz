@@ -200,7 +200,7 @@ struct IrFuncDef: IrDeclContainer {
 
     void output_eeyore(list<string> &buf);
     void gen_inst(InstRoot *root);
-    void peekhole_optimize();
+    bool peekhole_optimize();
 
     // cfg
 

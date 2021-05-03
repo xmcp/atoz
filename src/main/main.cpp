@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
 
     /// OPTIMIZE IR
     for(auto func: ir_root->funcs)
-        func.first->peekhole_optimize();
+        for(int round=0; round<3 && func.first->peekhole_optimize(); round++);
 
     /// GEN CFG, REG ALLOC, CALC DESTROY SET
     if(!skip_analyze) {

@@ -1,8 +1,10 @@
 #include "../main/common.hpp"
 #include "ir.hpp"
 
-void IrFuncDef::peekhole_optimize() {
+bool IrFuncDef::peekhole_optimize() {
+    bool changed = false;
     auto lastit = stmts.end();
+
     for(auto it=stmts.begin(); it!=stmts.end();) {
         if(istype(it->first, IrMov)) {
             auto *movstmt = (IrMov*)it->first;
@@ -21,19 +23,19 @@ void IrFuncDef::peekhole_optimize() {
                 if(istype(last, IrOpBinary)) {
                     ((IrOpBinary*)last)->dest = movstmt->dest;
                     it = stmts.erase(it);
-                    continue;
+                    changed = true; continue;
                 } else if(istype(last, IrOpUnary)) {
                     ((IrOpUnary*)last)->dest = movstmt->dest;
                     it = stmts.erase(it);
-                    continue;
+                    changed = true; continue;
                 } else if(istype(last, IrCall)) {
                     ((IrCall*)last)->ret = movstmt->dest;
                     it = stmts.erase(it);
-                    continue;
+                    changed = true; continue;
                 } else if(istype(last, IrMov)) {
                     ((IrMov*)last)->dest = movstmt->dest;
                     it = stmts.erase(it);
-                    continue;
+                    changed = true; continue;
                 }
             }
         } else if(istype(it->first, IrCondGoto)) {
@@ -65,7 +67,7 @@ void IrFuncDef::peekhole_optimize() {
                         stmts.erase(lastit);
                         lastit = it;
                         it++;
-                        continue;
+                        changed = true; continue;
                     }
                 }
             }
@@ -75,4 +77,6 @@ void IrFuncDef::peekhole_optimize() {
         lastit = it;
         it++;
     }
+
+    return changed;
 }
