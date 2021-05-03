@@ -212,7 +212,7 @@ Preg choose_reg(CorrGraph graph, int x, vector<Preg> avail_regs, const unordered
             );
         return recommendation;
     } else {
-        if(OUTPUT_REC_TOOK)
+        if(OUTPUT_REC_TOOK && recommendation!=Preg('x', 0))
             printf(
                 "info: regalloc SKIP recommendation %s -> %s (used %s)\n",
                 demystify_reguid(x).c_str(),

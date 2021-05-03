@@ -269,13 +269,13 @@ void IrArraySet::gen_inst(InstFuncDef *func) {
         switch(dest.val.reference->pos) {
             case DefGlobal:
                 func->push_stmt(new InstLoadAddrGlobal(tmpreg1, dest.val.reference->index));
-                func->push_stmt(new InstArraySet(tmpreg1, doffset, rload(src, 1)));
+                func->push_stmt(new InstArraySet(tmpreg1, doffset, rload(src, 0)));
                 break;
 
             case DefLocal:
                 assert(this->func->get_vreg(dest).pos==Vreg::VregInStack);
                 func->push_stmt(new InstLoadAddrStack(tmpreg1, this->func->get_vreg(dest).spilloffset + doffset/4));
-                func->push_stmt(new InstArraySet(tmpreg1, 0, rload(src, 1)));
+                func->push_stmt(new InstArraySet(tmpreg1, 0, rload(src, 0)));
                 break;
 
             case DefArg:
