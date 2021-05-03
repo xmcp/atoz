@@ -127,8 +127,32 @@ Preg fn_rstore(LVal v, IrFuncDef *irfunc) {
 
 void fn_dostore(LVal v, IrFuncDef *irfunc, InstFuncDef *instfunc) {
     if(v.type==LVal::Reference && v.val.reference->pos==DefGlobal) { // ref global
-        instfunc->push_stmt(new InstLoadAddrGlobal(tmpreg1, v.val.reference->index));
-        instfunc->push_stmt(new InstArraySet(tmpreg1, 0, tmpreg0));
+
+        InstStmt *last = instfunc->get_last_stmt();
+        if(istype(last, InstMov)) {
+            InstMov *movstmt = (InstMov*)last;
+            if(movstmt->dest==tmpreg0 && movstmt->src!=tmpreg1) {
+                /*
+                 * t0 = some_reg    <- last
+                 * loadaddr v.. t1
+                 * t1 [0] = t0
+                 *
+                 * -- can be optimized to --
+                 *
+                 * loadaddr v.. t1
+                 * t1 [0] = some_reg
+                 */
+                instfunc->stmts.pop_back();
+                instfunc->push_stmt(new InstLoadAddrGlobal(tmpreg1, v.val.reference->index));
+                instfunc->push_stmt(new InstArraySet(tmpreg1, 0, movstmt->src));
+            } else {
+                instfunc->push_stmt(new InstLoadAddrGlobal(tmpreg1, v.val.reference->index));
+                instfunc->push_stmt(new InstArraySet(tmpreg1, 0, tmpreg0));
+            }
+        } else {
+            instfunc->push_stmt(new InstLoadAddrGlobal(tmpreg1, v.val.reference->index));
+            instfunc->push_stmt(new InstArraySet(tmpreg1, 0, tmpreg0));
+        }
     } else { // vregged
         irfunc->get_vreg(v).store_onto_stack_if_needed(instfunc);
     }
@@ -213,14 +237,14 @@ void IrArraySet::gen_inst(InstFuncDef *func) {
     } else { // reference
         switch(dest.val.reference->pos) {
             case DefGlobal:
-                func->push_stmt(new InstLoadAddrGlobal(tmpreg0, dest.val.reference->index));
-                func->push_stmt(new InstArraySet(tmpreg0, doffset, rload(src, 1)));
+                func->push_stmt(new InstLoadAddrGlobal(tmpreg1, dest.val.reference->index));
+                func->push_stmt(new InstArraySet(tmpreg1, doffset, rload(src, 1)));
                 break;
 
             case DefLocal:
                 assert(this->func->get_vreg(dest).pos==Vreg::VregInStack);
-                func->push_stmt(new InstLoadAddrStack(tmpreg0, this->func->get_vreg(dest).spilloffset + doffset/4));
-                func->push_stmt(new InstArraySet(tmpreg0, 0, rload(src, 1)));
+                func->push_stmt(new InstLoadAddrStack(tmpreg1, this->func->get_vreg(dest).spilloffset + doffset/4));
+                func->push_stmt(new InstArraySet(tmpreg1, 0, rload(src, 1)));
                 break;
 
             case DefArg:
@@ -248,8 +272,8 @@ void IrArrayGet::gen_inst(InstFuncDef *func) {
 
             case DefLocal:
                 assert(this->func->get_vreg(src).pos==Vreg::VregInStack);
-                func->push_stmt(new InstLoadAddrStack(tmpreg1, this->func->get_vreg(src).spilloffset));
-                func->push_stmt(new InstArrayGet(rstore(dest), tmpreg1, soffset));
+                func->push_stmt(new InstLoadAddrStack(tmpreg1, this->func->get_vreg(src).spilloffset + soffset/4));
+                func->push_stmt(new InstArrayGet(rstore(dest), tmpreg1, 0));
                 break;
 
             case DefArg:

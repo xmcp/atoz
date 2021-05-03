@@ -64,6 +64,8 @@ struct InstFuncDef: Inst {
         stmts.push_back(stmt);
     }
 
+    InstStmt *get_last_stmt();
+
     void output_tigger(list<string> &buf);
     void output_asm(list<string> &buf);
 };
