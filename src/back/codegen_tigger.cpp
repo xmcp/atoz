@@ -119,7 +119,7 @@ void InstComment::output_tigger(list<string> &buf) {
 
 void InstAddI::output_tigger(list<string> &buf) {
     if(dest==operand1 && operand2==0)
-        outstmt("#%s = %s + 0", tig(dest), tig(operand1));
+        outstmt("//%s = %s + 0", tig(dest), tig(operand1));
     else
         outstmt("%s = %s + %d", tig(dest), tig(operand1), operand2);
 }

@@ -233,7 +233,7 @@ struct IrFuncDefBuiltin: IrFuncDef {
 
     void output_eeyore(list<string> &buf) override = 0;
     void gen_inst(InstRoot *root) override = 0;
-    bool peekhole_optimize() override {}
+    bool peekhole_optimize() override {return false;}
 
     void connect_all_cfg() override {}
     void regalloc() override {}
