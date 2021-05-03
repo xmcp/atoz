@@ -199,9 +199,9 @@ struct IrFuncDef: IrDeclContainer {
     int gen_label();
     LVal gen_scalar_tempvar();
 
-    void output_eeyore(list<string> &buf);
-    void gen_inst(InstRoot *root);
-    bool peekhole_optimize();
+    virtual void output_eeyore(list<string> &buf);
+    virtual void gen_inst(InstRoot *root);
+    virtual bool peekhole_optimize();
 
     // cfg
 
@@ -222,9 +222,22 @@ struct IrFuncDef: IrDeclContainer {
         return get_vreg(val.reguid());
     }
 
-    void connect_all_cfg();
-    void regalloc();
-    void report_destroyed_set();
+    virtual void connect_all_cfg();
+    virtual void regalloc();
+    virtual void report_destroyed_set();
+};
+
+struct IrFuncDefBuiltin: IrFuncDef {
+    IrFuncDefBuiltin(IrRoot *root, FuncType type, string name, AstFuncDefParams *params):
+        IrFuncDef(root, type, name, params) {}
+
+    void output_eeyore(list<string> &buf) override = 0;
+    void gen_inst(InstRoot *root) override = 0;
+    bool peekhole_optimize() override {}
+
+    void connect_all_cfg() override {}
+    void regalloc() override {}
+    void report_destroyed_set() override = 0;
 };
 
 struct IrRoot: IrDeclContainer {
@@ -594,4 +607,17 @@ struct IrLocalArrayFillZero: IrStmt {
         push_if_pooled(dest);
         return v;
     }
+};
+
+struct IrFuncDefMemcpy: IrFuncDefBuiltin {
+    int looplabel;
+
+    IrFuncDefMemcpy(IrRoot *root, FuncType type, string name, AstFuncDefParams *params):
+        IrFuncDefBuiltin(root, type, name, params) {
+        looplabel = gen_label();
+    }
+
+    void output_eeyore(list<string> &buf) override;
+    void gen_inst(InstRoot *root) override;
+    void report_destroyed_set() override;
 };

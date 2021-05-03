@@ -2,6 +2,7 @@
 
 #include "../main/common.hpp"
 #include "ast.hpp"
+#include "../front/builtin_detection.hpp"
 
 #define generror(...) do { \
     printf("codegen ir error: "); \
@@ -86,6 +87,13 @@ void AstDef::gen_ir_init_local(IrFuncDef *func) {
 
 void AstFuncDef::gen_ir(IrRoot *root) {
     auto *func = new IrFuncDef(root, type, name, params);
+
+    auto wrapper = create_builtin_wrapper(this, func);
+    if(wrapper) {
+        root->push_func(wrapper);
+        return;
+    }
+
     root->push_func(func);
 
     body->gen_ir(func);
