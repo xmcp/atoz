@@ -2,35 +2,36 @@
 #include "ir.hpp"
 
 void IrFuncDef::peekhole_optimize() {
-    list<Commented(IrStmt*)>::iterator lastit = stmts.end();
+    auto lastit = stmts.end();
     for(auto it=stmts.begin(); it!=stmts.end();) {
         if(istype(it->first, IrMov)) {
             auto *movstmt = (IrMov*)it->first;
             if(movstmt->src.type==RVal::TempVar && lastit!=stmts.end()) {
                 /*
-                 * tempvar = op1 op op2
+                 * tempvar = op1 op op2   <- last
                  * T... = tempvar         <- movstmt
                  *
                  * -- can be optimized to --
                  *
-                 * T... = op1 op op2
+                 * T... = op1 op op2      <- last
                  */
 
                 auto last = lastit->first;
 
                 if(istype(last, IrOpBinary)) {
                     ((IrOpBinary*)last)->dest = movstmt->dest;
-                    lastit = stmts.end();
                     it = stmts.erase(it);
                     continue;
                 } else if(istype(last, IrOpUnary)) {
                     ((IrOpUnary*)last)->dest = movstmt->dest;
-                    lastit = stmts.end();
                     it = stmts.erase(it);
                     continue;
                 } else if(istype(last, IrCall)) {
                     ((IrCall*)last)->ret = movstmt->dest;
-                    lastit = stmts.end();
+                    it = stmts.erase(it);
+                    continue;
+                } else if(istype(last, IrMov)) {
+                    ((IrMov*)last)->dest = movstmt->dest;
                     it = stmts.erase(it);
                     continue;
                 }
@@ -43,12 +44,12 @@ void IrFuncDef::peekhole_optimize() {
             ) {
                 if(lastit!=stmts.end() && istype(lastit->first, IrOpBinary)) {
                     /*
-                     * tempvar = op1 rel op2
+                     * tempvar = op1 rel op2       <- last
                      * if tempvar == 0 goto label  <- gotostmt
                      *
                      * -- can be optimized to --
                      *
-                     * if op1 !rel op2 goto label
+                     * if op1 !rel op2 goto label  <- last
                      */
 
                     auto lastbin = (IrOpBinary*)lastit->first;
@@ -62,7 +63,7 @@ void IrFuncDef::peekhole_optimize() {
                         gotostmt->operand2 = lastbin->operand2;
                         gotostmt->op = gotostmt->op==RelEq ? rel_invert(relop) : relop;
                         stmts.erase(lastit);
-                        lastit = stmts.end();
+                        lastit = it;
                         it++;
                         continue;
                     }
