@@ -115,7 +115,8 @@ struct AstDef: Ast {
 
     // in yyparse phase
     VarType type;
-    bool is_const;
+    bool effectively_const; // MUST be sound by analysis
+    bool ast_is_const;
     DefPosition pos;
     int index;
 
@@ -124,7 +125,7 @@ struct AstDef: Ast {
 
     AstDef(string var_name, AstMaybeIdx *idxinfo, AstInitVal *ast_initval):
             name(var_name), idxinfo(idxinfo), ast_initval_or_null(ast_initval), initval(),
-            type(VarInt), is_const(false), pos(DefUnknown), index(-1) {}
+            type(VarInt), effectively_const(true), ast_is_const(false), pos(DefUnknown), index(-1) {}
     void calc_initval();
     void gen_ir_decl(IrDeclContainer *cont);
     void gen_ir_init_local(IrFuncDef *func);

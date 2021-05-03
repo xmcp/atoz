@@ -145,7 +145,10 @@ public:
     }
 
     void visit(AstFuncUseParams *node, SymTable *tbl) {
+        tbl = new SymTable(tbl);
+        tbl->special.put("may_modify_array", node);
         visitall(node->val);
+        delete tbl;
     }
 
     void visit(AstBlock *node, SymTable *tbl) {
@@ -155,7 +158,11 @@ public:
     }
 
     void visit(AstStmtAssignment *node, SymTable *tbl) {
-        visit(node->lval, tbl);
+        auto new_tbl = new SymTable(tbl);
+        new_tbl->special.put("may_modify_scalar", node);
+        new_tbl->special.put("may_modify_array", node);
+        visit(node->lval, new_tbl);
+        delete new_tbl;
         visit(node->rval, tbl);
     }
 
@@ -222,6 +229,10 @@ public:
 
     void visit(AstExpLVal *node, SymTable *tbl) {
         node->def = tbl->var.get(node->name);
+
+        if(tbl->special.get(node->def->idxinfo->dims()>0 ? "may_modify_array" : "may_modify_scalar"))
+            node->def->effectively_const = false;
+
         node->dim_left = (int)(node->def->idxinfo->dims() - node->idxinfo->dims());
         if(node->dim_left<0)
             typeerror(
@@ -230,6 +241,7 @@ public:
                 (int)node->def->idxinfo->dims(),
                 (int)node->idxinfo->dims()
             );
+
         visit(node->idxinfo, tbl);
     }
 

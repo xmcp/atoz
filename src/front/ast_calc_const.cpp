@@ -52,7 +52,7 @@ ConstExpResult do_binary_op(BinaryOpKinds op, int val1, int val2) {
 }
 
 ConstExpResult AstExpLVal::calc_const() {
-    if(!def->is_const)
+    if(!def->ast_is_const && !def->effectively_const)
         return ConstExpResult::asError("lval not const");
 
     // initval is initialized in tree completing phase

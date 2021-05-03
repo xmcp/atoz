@@ -20,7 +20,8 @@ void AstDecl::propagate_property() {
     static int idx = 0; // global and local vars share same indexing in eeyore
     for(AstDef *def: defs->val) {
         def->type = _type;
-        def->is_const = _is_const;
+        def->ast_is_const = _is_const;
+        def->effectively_const = true;
         def->index = idx++;
     }
 }
@@ -35,7 +36,8 @@ void AstFuncDefParams::propagate_property_and_defpos() {
     int idx = 0;
     for(AstDef *def: val) {
         def->type = VarInt;
-        def->is_const = false;
+        def->ast_is_const = false;
+        def->effectively_const = false;
         def->index = idx++;
         def->pos = DefArg;
     }

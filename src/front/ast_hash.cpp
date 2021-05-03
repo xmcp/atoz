@@ -24,7 +24,7 @@ asthash_t AstDefs::asthash() {
 
 asthash_t AstDef::asthash() {
     return hstr("def") +  (
-        hint(type) + hint(is_const) + hstr(name) +
+        hint(type) + hint(ast_is_const) + hstr(name) +
         idxinfo->asthash() + (ast_initval_or_null ? ast_initval_or_null->asthash() : hstr("null"))
     );
 }
