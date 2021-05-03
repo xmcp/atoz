@@ -9,7 +9,7 @@ using std::stack;
 using std::unordered_set;
 
 const bool OUTPUT_REC_LEARNT = false;
-const bool OUTPUT_REC_TOOK = true;
+const bool OUTPUT_REC_TOOK = false;
 
 void clear_inqueue(IrFuncDef *func) {
     for(const auto& stmtpair: func->stmts)

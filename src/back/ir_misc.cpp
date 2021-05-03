@@ -171,4 +171,3 @@ void IrRoot::install_builtin_destroy_sets() {
     destroy_sets.insert(make_pair("_sysy_starttime", destory_set));
     destroy_sets.insert(make_pair("_sysy_stoptime", destory_set));
 }
-

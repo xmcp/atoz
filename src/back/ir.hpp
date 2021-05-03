@@ -231,7 +231,7 @@ struct IrFuncDefBuiltin: IrFuncDef {
     IrFuncDefBuiltin(IrRoot *root, FuncType type, string name, AstFuncDefParams *params):
         IrFuncDef(root, type, name, params) {}
 
-    void output_eeyore(list<string> &buf) override = 0;
+    void output_eeyore(list<string> &buf) override {assert(false);};
     void gen_inst(InstRoot *root) override = 0;
     bool peekhole_optimize() override {return false;}
 
@@ -610,14 +610,17 @@ struct IrLocalArrayFillZero: IrStmt {
 };
 
 struct IrFuncDefMemcpy: IrFuncDefBuiltin {
-    int looplabel;
-
     IrFuncDefMemcpy(IrRoot *root, FuncType type, string name, AstFuncDefParams *params):
-        IrFuncDefBuiltin(root, type, name, params) {
-        looplabel = gen_label();
-    }
+        IrFuncDefBuiltin(root, type, name, params) {}
 
-    void output_eeyore(list<string> &buf) override;
+    void gen_inst(InstRoot *root) override;
+    void report_destroyed_set() override;
+};
+
+struct IrFuncDefMul: IrFuncDefBuiltin {
+    IrFuncDefMul(IrRoot *root, FuncType type, string name, AstFuncDefParams *params):
+        IrFuncDefBuiltin(root, type, name, params) {}
+
     void gen_inst(InstRoot *root) override;
     void report_destroyed_set() override;
 };

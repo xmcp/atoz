@@ -12,6 +12,7 @@ extern void yyrestart(FILE*);
 
 extern bool OUTPUT_REGALLOC_PREFIX;
 extern bool OUTPUT_DEF_USE;
+extern bool DO_DETECT_BUILTIN;
 
 #define mainerror(...) do { \
     printf("main error: "); \
@@ -85,6 +86,13 @@ int main(int argc, char **argv) {
     parse_oj_args(argc, argv);
     yyrestart(oj_in);
 
+    if(output_format==Eeyore) {
+        DO_DETECT_BUILTIN = false;
+        OUTPUT_REGALLOC_PREFIX = false;
+        OUTPUT_DEF_USE = false;
+        skip_analyze = true;
+    }
+
     /// PARSE
     yyparse();
 
@@ -95,11 +103,6 @@ int main(int argc, char **argv) {
     auto *ir_root = new IrRoot();
     ast_root->gen_ir(ir_root);
 
-    if(output_format==Eeyore) {
-        OUTPUT_REGALLOC_PREFIX = false;
-        OUTPUT_DEF_USE = false;
-        skip_analyze = true;
-    }
 
     /// OPTIMIZE IR
     for(auto func: ir_root->funcs)

@@ -24,3 +24,5 @@ inline bool imm_overflows(int imm) {
 } while(0)
 
 #define istype(ptr, cls) (dynamic_cast<cls*>(ptr)!=nullptr)
+
+typedef unsigned long long asthash_t;

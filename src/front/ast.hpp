@@ -40,6 +40,7 @@ struct Ast: GarbageCollectable {
     NodeLocation loc;
 
     Ast(): GarbageCollectable(), loc() {}
+    virtual asthash_t asthash() = 0;
 };
 
 struct ConstExpResult {
@@ -76,6 +77,7 @@ struct AstCompUnit: Ast {
 
     void complete_tree();
     void gen_ir(IrRoot *root);
+    asthash_t asthash() override {assert(false);}
 };
 
 struct AstDecl: Ast {
@@ -92,6 +94,7 @@ struct AstDecl: Ast {
     void propagate_defpos(DefPosition pos);
     void gen_ir_local(IrFuncDef *func);
     void gen_ir_global(IrRoot *root);
+    asthash_t asthash() override;
 };
 
 struct AstDefs: Ast {
@@ -101,6 +104,8 @@ struct AstDefs: Ast {
     void push_val(AstDef *next) {
         val.push_back(next);
     }
+
+    asthash_t asthash() override;
 };
 
 struct AstDef: Ast {
@@ -124,6 +129,8 @@ struct AstDef: Ast {
     void gen_ir_decl(IrDeclContainer *cont);
     void gen_ir_init_local(IrFuncDef *func);
     void gen_ir_init_global(IrRoot *root);
+
+    asthash_t asthash() override;
 };
 
 struct AstMaybeIdx: Ast {
@@ -137,6 +144,8 @@ struct AstMaybeIdx: Ast {
     int dims() {
         return val.size();
     }
+
+    asthash_t asthash() override;
 };
 
 struct AstInitVal: Ast {
@@ -154,6 +163,8 @@ struct AstInitVal: Ast {
         assert(is_many);
         val.many->push_back(next);
     }
+
+    asthash_t asthash() override;
 };
 
 struct AstFuncDef: Ast {
@@ -168,6 +179,7 @@ struct AstFuncDef: Ast {
     AstFuncDef(FuncType type, string func_name, AstFuncDefParams *params, AstBlock *body):
         type(type), name(func_name), params(params), body(body) {}
     void gen_ir(IrRoot *root);
+    asthash_t asthash() override;
 };
 
 struct AstFuncDefParams: Ast {
@@ -178,6 +190,7 @@ struct AstFuncDefParams: Ast {
         val.push_back(next);
     }
     void propagate_property_and_defpos();
+    asthash_t asthash() override;
 };
 
 struct AstFuncUseParams: Ast {
@@ -190,6 +203,7 @@ struct AstFuncUseParams: Ast {
         val.push_back(next);
     }
     void gen_ir(IrFuncDef *func);
+    asthash_t asthash() override;
 };
 
 struct AstBlock: Ast {
@@ -198,6 +212,7 @@ struct AstBlock: Ast {
     AstBlock() {}
     void push_val(Ast *next);
     void gen_ir(IrFuncDef *func);
+    asthash_t asthash() override;
 };
 
 ///// STATEMENT
@@ -216,6 +231,7 @@ struct AstStmtAssignment: AstStmt {
     AstStmtAssignment(AstExpLVal *lval, AstExp *rval): AstStmt(StmtAssignment),
         lval(lval), rval(rval) {}
     void gen_ir(IrFuncDef *func) override;
+    asthash_t asthash() override;
 };
 
 struct AstStmtExp: AstStmt {
@@ -224,11 +240,13 @@ struct AstStmtExp: AstStmt {
     AstStmtExp(AstExp *exp): AstStmt(StmtExp),
         exp(exp) {}
     void gen_ir(IrFuncDef *func) override;
+    asthash_t asthash() override;
 };
 
 struct AstStmtVoid: AstStmt {
     AstStmtVoid(): AstStmt(StmtVoid) {}
     void gen_ir(IrFuncDef *func) override;
+    asthash_t asthash() override;
 };
 
 struct AstStmtBlock: AstStmt {
@@ -237,6 +255,7 @@ struct AstStmtBlock: AstStmt {
     AstStmtBlock(AstBlock *block): AstStmt(StmtBlock),
         block(block) {}
     void gen_ir(IrFuncDef *func) override;
+    asthash_t asthash() override;
 };
 
 struct AstStmtIfOnly: AstStmt {
@@ -246,6 +265,7 @@ struct AstStmtIfOnly: AstStmt {
     AstStmtIfOnly(AstExp *cond, AstStmt *body): AstStmt(StmtIfOnly),
         cond(cond), body(body) {}
     void gen_ir(IrFuncDef *func) override;
+    asthash_t asthash() override;
 };
 
 struct AstStmtIfElse: AstStmt {
@@ -256,6 +276,7 @@ struct AstStmtIfElse: AstStmt {
     AstStmtIfElse(AstExp *cond, AstStmt *body_true, AstStmt *body_false): AstStmt(StmtIfElse),
         cond(cond), body_true(body_true), body_false(body_false) {}
     void gen_ir(IrFuncDef *func) override;
+    asthash_t asthash() override;
 };
 
 struct AstStmtWhile: AstStmt {
@@ -269,6 +290,7 @@ struct AstStmtWhile: AstStmt {
     AstStmtWhile(AstExp *cond, AstStmt *body): AstStmt(StmtWhile),
         cond(cond), body(body), ltest(-1), ldone(-1) {}
     void gen_ir(IrFuncDef *func) override;
+    asthash_t asthash() override;
 };
 
 struct AstStmtBreak: AstStmt {
@@ -277,6 +299,7 @@ struct AstStmtBreak: AstStmt {
 
     AstStmtBreak(): AstStmt(StmtBreak), loop(nullptr) {}
     void gen_ir(IrFuncDef *func) override;
+    asthash_t asthash() override;
 };
 
 struct AstStmtContinue: AstStmt {
@@ -285,11 +308,13 @@ struct AstStmtContinue: AstStmt {
 
     AstStmtContinue(): AstStmt(StmtContinue), loop(nullptr) {}
     void gen_ir(IrFuncDef *func) override;
+    asthash_t asthash() override;
 };
 
 struct AstStmtReturnVoid: AstStmt {
     AstStmtReturnVoid(): AstStmt(StmtReturnVoid) {}
     void gen_ir(IrFuncDef *func) override;
+    asthash_t asthash() override;
 };
 
 struct AstStmtReturn: AstStmt {
@@ -298,6 +323,7 @@ struct AstStmtReturn: AstStmt {
     AstStmtReturn(AstExp *retval): AstStmt(StmtReturn),
         retval(retval) {}
     void gen_ir(IrFuncDef *func) override;
+    asthash_t asthash() override;
 };
 
 ///// EXPRESSION
@@ -334,6 +360,7 @@ struct AstExpLVal: AstExp {
         def(nullptr), dim_left(-1) {}
     ConstExpResult calc_const() override;
     RVal gen_rval(IrFuncDef *func) override;
+    asthash_t asthash() override;
 };
 
 struct AstExpLiteral: AstExp {
@@ -342,6 +369,7 @@ struct AstExpLiteral: AstExp {
     AstExpLiteral(int val): val(val) {}
     ConstExpResult calc_const() override;
     RVal gen_rval(IrFuncDef *func) override;
+    asthash_t asthash() override;
 };
 
 struct AstExpFunctionCall: AstExp {
@@ -356,6 +384,7 @@ struct AstExpFunctionCall: AstExp {
         def(nullptr) {}
     ConstExpResult calc_const() override;
     RVal gen_rval(IrFuncDef *func) override;
+    asthash_t asthash() override;
 };
 
 struct AstExpOpUnary: AstExp {
@@ -366,6 +395,7 @@ struct AstExpOpUnary: AstExp {
         op(op), operand(operand) {}
     ConstExpResult calc_const() override;
     RVal gen_rval(IrFuncDef *func) override;
+    asthash_t asthash() override;
 };
 
 struct AstExpOpBinary: AstExp {
@@ -377,4 +407,5 @@ struct AstExpOpBinary: AstExp {
         op(op), operand1(operand1), operand2(operand2) {}
     ConstExpResult calc_const() override;
     RVal gen_rval(IrFuncDef *func) override;
+    asthash_t asthash() override;
 };
