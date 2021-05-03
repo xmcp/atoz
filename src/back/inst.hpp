@@ -306,3 +306,17 @@ struct InstAddI: InstStmt {
     void output_tigger(list<string> &buf) override;
     void output_asm(list<string> &buf) override;
 };
+
+struct InstLeftShiftI: InstStmt {
+    Preg dest;
+    Preg operand1;
+    int operand2;
+
+    InstLeftShiftI(Preg dest, Preg operand1, int operand2):
+        dest(dest), operand1(operand1), operand2(operand2) {
+        assert(operand2<=31 && operand2>=-31);
+    }
+
+    void output_tigger(list<string> &buf) override;
+    void output_asm(list<string> &buf) override;
+};

@@ -121,6 +121,15 @@ void InstAddI::output_tigger(list<string> &buf) {
     outstmt("%s = %s + %d", tig(dest), tig(operand1), operand2);
 }
 
+void InstLeftShiftI::output_tigger(list<string> &buf) {
+    if(operand2>0)
+        outstmt("%s = %s * %d // shift left", tig(dest), tig(operand1), 1<<operand2);
+    else if(operand2<0)
+        outstmt("%s = %s / %d // shift right", tig(dest), tig(operand1), 1<<(-operand2));
+    else
+        outstmt("%s = %s // shift 0", tig(dest), tig(operand1));
+}
+
 #undef tig
 #undef outasm
 

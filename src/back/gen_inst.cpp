@@ -1,3 +1,6 @@
+#include <algorithm>
+using std::swap;
+
 #include "inst.hpp"
 #include "ir.hpp"
 #include "../front/ast.hpp"
@@ -130,7 +133,7 @@ void fn_dostore(LVal v, IrFuncDef *irfunc, InstFuncDef *instfunc) {
 
         InstStmt *last = instfunc->get_last_stmt();
         if(istype(last, InstMov)) {
-            InstMov *movstmt = (InstMov*)last;
+            auto *movstmt = (InstMov*)last;
             if(movstmt->dest==tmpreg0 && movstmt->src!=tmpreg1) {
                 /*
                  * t0 = some_reg    <- last
@@ -169,10 +172,31 @@ void fn_dostore(LVal v, IrFuncDef *irfunc, InstFuncDef *instfunc) {
     } \
 } while(0)
 
+bool is_small_pow2(int x) {
+    for(int i=0; i<31; i++) // exclude i=31 to avoid signing issues
+        if(x==(1<<i))
+            return true;
+    return false;
+}
+int get_small_pow2(int x) {
+    for(int i=0; i<31; i++) // exclude i=31 to avoid signing issues
+        if(x==(1<<i))
+            return i;
+    assert(false);
+}
+
 void IrOpBinary::gen_inst(InstFuncDef *func) {
     ret_if_unused(dest);
 
     Preg regop1 = Preg('x', 0);
+
+    if((op==OpPlus || op==OpMul) && operand1.type==RVal::ConstExp)
+        swap(operand1, operand2); // const + x --> x + const for further optim
+
+    if(op==OpMinus && operand2.type==RVal::ConstExp) {
+        op = OpPlus; // x - const --> x + (-const) for further optim
+        operand2.val.constexp = -operand2.val.constexp;
+    }
 
     if(operand1.type==RVal::Reference && operand1.val.reference->idxinfo->dims()>0) {
         // pointer math, e.g. ptr = arr + idx
@@ -200,9 +224,16 @@ void IrOpBinary::gen_inst(InstFuncDef *func) {
         regop1 = rload(operand1, 0);
     }
 
-    if(op==OpPlus && operand2.type==RVal::ConstExp && !imm_overflows(operand2.val.constexp)) {
+    bool op2_is_const = operand2.type==RVal::ConstExp && !imm_overflows(operand2.val.constexp);
+    bool op2_is_const_powof2 = op2_is_const && is_small_pow2(operand2.val.constexp);
+
+    if(op==OpPlus && op2_is_const) {
         // can be simplified into addi
         func->push_stmt(new InstAddI(rstore(dest), regop1, operand2.val.constexp));
+    } else if(op==OpMul && op2_is_const_powof2) {
+        // can be simplified to left shift
+        int pow = get_small_pow2(operand2.val.constexp);
+        func->push_stmt(new InstLeftShiftI(rstore(dest), regop1, pow));
     } else {
         // normal reg-reg add
         Preg regop2 = rload(operand2, 1);

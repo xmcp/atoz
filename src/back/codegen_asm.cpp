@@ -277,6 +277,17 @@ void InstAddI::output_asm(list<string> &buf) {
     outstmt("addi %s, %s, %d", tig(dest), tig(operand1), operand2);
 }
 
+void InstLeftShiftI::output_asm(list<string> &buf) {
+    if(operand2>0)
+        outstmt("slli %s, %s, %d", tig(dest), tig(operand1), operand2);
+    else if(operand2<0)
+        outstmt("srai %s, %s, %d", tig(dest), tig(operand1), -operand2);
+    else if(dest!=operand1)
+        outstmt("mv %s, %s # shift 0", tig(dest), tig(operand1));
+    else
+        outstmt("#mv %s, %s # shift self 0", tig(dest), tig(operand1));
+}
+
 #undef tig
 #undef outasm
 
