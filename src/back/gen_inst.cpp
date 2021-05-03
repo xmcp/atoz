@@ -347,19 +347,41 @@ int vector_index_of(vector<T> v, T x) {
     return -1;
 }
 
-vector<Preg> IrCallVoid::gen_inst_common(InstFuncDef *func) {
+vector<Preg> IrCallVoid::gen_inst_common(InstFuncDef *func, Preg skipped_retreg) {
     func->isleaf = false;
 
     // collect caller saved regs
 
-    vector<Preg> saved_regs;
+    vector<Preg> meet_regs;
     auto destroy_set = this->func->root->get_destroy_set(name);
 
-    for(auto uid: alive_pooled_vars) {
+    for(auto uid: meet_pooled_vars) {
         Vreg reg = this->func->get_vreg(uid);
-        if(reg.pos==Vreg::VregInReg && destroy_set.find(reg.reg)!=destroy_set.end())
-            saved_regs.push_back(reg.reg);
+        if(
+            reg.pos==Vreg::VregInReg &&
+            destroy_set.find(reg.reg)!=destroy_set.end() &&
+            reg.reg!=skipped_retreg
+        )
+            meet_regs.push_back(reg.reg);
     }
+
+    vector<Preg> saved_regs = meet_regs;
+
+    // collect regs destroyed by param-passing
+
+    for(int pidx=0; pidx<(int)params.size(); pidx++) {
+        auto param = params[pidx];
+        if(param->param.regpooled()) {
+            Vreg vreg = this->func->get_vreg(param->param);
+            if(vreg.pos==Vreg::VregInReg && vreg.reg.cat=='a' && vreg.reg.index<pidx) {
+                // e.g. a2 := a0, thus need to load/save a0 from/into stack
+                if(vector_index_of(saved_regs, vreg.reg)==-1)
+                    saved_regs.push_back(vreg.reg);
+            }
+        }
+    }
+
+    assert((int)saved_regs.size() <= this->func->callersavesize);
 
     // save them
 
@@ -369,15 +391,18 @@ vector<Preg> IrCallVoid::gen_inst_common(InstFuncDef *func) {
     // pass param
     // note that param in a* need to be loaded from stack to avoid collision
 
-    for(auto param: params) {
+    for(int pidx=0; pidx<(int)params.size(); pidx++) {
+        auto param = params[pidx];
+
+        // check collision
         if(param->param.regpooled()) {
             Vreg vreg = this->func->get_vreg(param->param);
             if(vreg.pos==Vreg::VregInReg) {
                 Preg preg = vreg.reg;
                 int saveidx = vector_index_of(saved_regs, preg);
 
-                if(preg.cat=='a' && preg.index<(int)params.size()) { // got a possible collision
-                    assert(saveidx!=-1); // param should be alive
+                if(preg.cat=='a' && preg.index<pidx) { // got a possible collision
+                    assert(saveidx!=-1);
 
                     func->push_stmt(new InstLoadStack(
                         Preg('a', param->pidx),
@@ -387,6 +412,7 @@ vector<Preg> IrCallVoid::gen_inst_common(InstFuncDef *func) {
                 }
             }
         }
+
         // otherwise, no collision, use simple mov
         param->gen_inst_handled_by_call(func);
     }
@@ -394,32 +420,35 @@ vector<Preg> IrCallVoid::gen_inst_common(InstFuncDef *func) {
     // call
     func->push_stmt(new InstCall(name));
 
-    return saved_regs;
+    return meet_regs;
 }
 
 void IrCallVoid::gen_inst(InstFuncDef *func) {
-    auto saved_regs = gen_inst_common(func);
+    auto meet_regs = gen_inst_common(func, Preg('x', 0));
 
     // restore saved regs
-    for(int i=0; i<(int)saved_regs.size(); i++)
-        saved_regs[i].caller_load_after(func, this->func->spillsize + i);
+    for(int i=0; i<(int)meet_regs.size(); i++)
+        meet_regs[i].caller_load_after(func, this->func->spillsize + i);
 }
 
 void IrCall::gen_inst(InstFuncDef *func) {
-    auto saved_regs = gen_inst_common(func); // up to `call`
+    auto retreg = Vreg(Preg('x', 0));
+    if(!unused(ret) && ret.regpooled())
+        retreg = this->func->get_vreg(ret.reguid());
 
-    Vreg retreg = Vreg(Preg('x', 0));
+    auto meet_regs = gen_inst_common(func, retreg.pos==Vreg::VregInReg ? retreg.reg : Preg('x', 0));
+    // gen_inst_common generates insts up to `call`
+
     if(!unused(ret)) { // save retval
         func->push_stmt(new InstMov(rstore(ret), Preg('a', 0)));
         dostore(ret);
-        retreg = ret.regpooled() ? this->func->get_vreg(ret.reguid()) : Vreg(Preg('x', 0));
     }
 
     // restore saved regs, except the retval reg
-    for(int i=0; i<(int)saved_regs.size(); i++) {
-        if(retreg.pos==Vreg::VregInReg && retreg.reg==saved_regs[i])
+    for(int i=0; i<(int)meet_regs.size(); i++) {
+        if(retreg.pos==Vreg::VregInReg && retreg.reg==meet_regs[i])
             continue;
-        saved_regs[i].caller_load_after(func, this->func->spillsize + i);
+        meet_regs[i].caller_load_after(func, this->func->spillsize + i);
     }
 }
 

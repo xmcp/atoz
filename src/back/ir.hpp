@@ -511,7 +511,7 @@ struct IrCallVoid: IrStmt {
         name(fn), params({}) {}
 
     void output_eeyore(list<string> &buf) override;
-    vector<Preg> gen_inst_common(InstFuncDef *func);
+    vector<Preg> gen_inst_common(InstFuncDef *func, Preg skipped_retreg);
     void gen_inst(InstFuncDef *func) override;
 
     // cfg

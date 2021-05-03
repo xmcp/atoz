@@ -291,6 +291,17 @@ struct Recommender {
             rec_label.insert(make_pair(_find(stmt->retval.reguid()), Preg('a', 0)));
         }
     }
+    void mark_call(IrCall *stmt) {
+        if(stmt->ret.regpooled()) {
+            if(OUTPUT_REC_LEARNT)
+                printf(
+                    "info: detected call %s\n",
+                    stmt->ret.eeyore_ref_global().c_str()
+                );
+
+            rec_label.insert(make_pair(_find(stmt->ret.reguid()), Preg('a', 0)));
+        }
+    }
     void mark_param(IrParam *stmt) {
         if(stmt->param.regpooled()) {
             if(OUTPUT_REC_LEARNT)
@@ -333,6 +344,8 @@ Recommender scan_recommendations(IrFuncDef *func) {
             rec.mark_ret((IrReturn*)stmt);
         else if(istype(stmt, IrParam))
             rec.mark_param((IrParam*)stmt);
+        else if(istype(stmt, IrCall))
+            rec.mark_call((IrCall*)stmt);
     }
     return rec;
 }
@@ -366,12 +379,12 @@ void IrFuncDef::regalloc() {
     vector<Preg> avail_regs;
 
     // t0 and t1 reserved for spilled register and assembler temporary
+    for(int s=0; s<=11; s++)
+        avail_regs.push_back(Preg('s', s));
     for(int t=2; t<=6; t++)
         avail_regs.push_back(Preg('t', t));
     for(int a=0; a<=7; a++)
         avail_regs.push_back(Preg('a', a));
-    for(int s=0; s<=11; s++)
-        avail_regs.push_back(Preg('s', s));
 
     Recommender rec = scan_recommendations(this);
 
