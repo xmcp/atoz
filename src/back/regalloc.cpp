@@ -8,6 +8,9 @@ using std::queue;
 using std::stack;
 using std::unordered_set;
 
+const bool OUTPUT_REC_LEARNT = false;
+const bool OUTPUT_REC_TOOK = true;
+
 void clear_inqueue(IrFuncDef *func) {
     for(const auto& stmtpair: func->stmts)
         stmtpair.first->_regalloc_inqueue = false;
@@ -184,7 +187,8 @@ int get_sacrificed_node(CorrGraph graph) {
     assert(false);
 }
 
-Preg choose_reg(CorrGraph graph, int x, vector<Preg> avail_regs, const unordered_map<int, Vreg> &vreg_map) {
+Preg choose_reg(CorrGraph graph, int x, vector<Preg> avail_regs, const unordered_map<int, Vreg> &vreg_map, Preg recommendation) {
+    unordered_set<Preg, Preg::Hash> useful_regs;
     for(Preg reg: avail_regs) { // test each reg
         for(int y: graph.edges_removed[x]) {
             auto it = vreg_map.find(y);
@@ -192,11 +196,31 @@ Preg choose_reg(CorrGraph graph, int x, vector<Preg> avail_regs, const unordered
                 goto fail; // a neighbor var uses this reg
         }
 
-        return reg;
+        useful_regs.insert(reg);
 
         fail: ; // try next reg
     }
-    assert(false); // no reg available, it shouldn't happen
+
+    assert(!useful_regs.empty());
+
+    if(useful_regs.find(recommendation)!=useful_regs.end()) {
+        if(OUTPUT_REC_TOOK)
+            printf(
+                "info: regalloc took recommendation %s -> %s\n",
+                demystify_reguid(x).c_str(),
+                recommendation.tigger_ref().c_str()
+            );
+        return recommendation;
+    } else {
+        if(OUTPUT_REC_TOOK)
+            printf(
+                "info: regalloc SKIP recommendation %s -> %s (used %s)\n",
+                demystify_reguid(x).c_str(),
+                recommendation.tigger_ref().c_str(),
+                (*useful_regs.begin()).tigger_ref().c_str()
+            );
+        return *useful_regs.begin();
+    }
 }
 
 void swap_preg(Preg a, Preg b, unordered_map<int, Vreg> &vreg_map) {
@@ -220,6 +244,97 @@ void check_alloc_does_not_conflict(IrFuncDef *func) {
             workingset.insert(reg);
         }
     }
+}
+
+struct Recommender {
+    unordered_map<int, int> rec_parent;
+    unordered_map<int, Preg> rec_label;
+
+    Recommender() {}
+
+    int _find(int x) {
+        if(rec_parent.find(x)==rec_parent.end() || rec_parent[x]==x)
+            return x;
+        else
+            return (rec_parent[x] = _find(rec_parent[x]));
+    }
+    void _union(int x, int y) {
+        x = _find(x);
+        y = _find(y);
+        if(x!=y) {
+            rec_parent[x] = y;
+            if(rec_label.find(y)==rec_label.end() && rec_label.find(x)!=rec_label.end())
+                rec_label.insert(make_pair(y, rec_label.find(x)->second));
+        }
+    }
+
+    void mark_mov(IrMov *stmt) {
+        if(stmt->dest.regpooled() && stmt->src.regpooled()) {
+            if(OUTPUT_REC_LEARNT)
+                printf(
+                    "info: detected mov %s <-> %s\n",
+                    stmt->dest.eeyore_ref_global().c_str(),
+                    stmt->src.eeyore_ref_global().c_str()
+                );
+
+            _union(stmt->dest.reguid(), stmt->src.reguid());
+        }
+    }
+    void mark_ret(IrReturn *stmt) {
+        if(stmt->retval.regpooled()) {
+            if(OUTPUT_REC_LEARNT)
+                printf(
+                    "info: detected ret %s\n",
+                    stmt->retval.eeyore_ref_global().c_str()
+                );
+
+            rec_label.insert(make_pair(_find(stmt->retval.reguid()), Preg('a', 0)));
+        }
+    }
+    void mark_param(IrParam *stmt) {
+        if(stmt->param.regpooled()) {
+            if(OUTPUT_REC_LEARNT)
+                printf(
+                    "info: detected param %s #%d\n",
+                    stmt->param.eeyore_ref_global().c_str(),
+                    stmt->pidx
+                );
+
+            rec_label.insert(make_pair(_find(stmt->param.reguid()), Preg('a', stmt->pidx)));
+        }
+    }
+    void mark_setreg(int vregid, Preg preg) {
+        if(OUTPUT_REC_LEARNT)
+                printf(
+                    "info: learned reg %s -> %s\n",
+                    demystify_reguid(vregid).c_str(),
+                    preg.tigger_ref().c_str()
+                );
+
+        rec_label.insert(make_pair(_find(vregid), preg));
+    }
+
+    Preg get_recommendation(int vregid) {
+        int group = _find(vregid);
+        if(rec_label.find(group)==rec_label.end())
+            return Preg('x', 0);
+        else
+            return rec_label.find(group)->second;
+    }
+};
+
+Recommender scan_recommendations(IrFuncDef *func) {
+    Recommender rec;
+    for(const auto& stmtpair: func->stmts) {
+        auto stmt = stmtpair.first;
+        if(istype(stmt, IrMov))
+            rec.mark_mov((IrMov*)stmt);
+        else if(istype(stmt, IrReturn))
+            rec.mark_ret((IrReturn*)stmt);
+        else if(istype(stmt, IrParam))
+            rec.mark_param((IrParam*)stmt);
+    }
+    return rec;
 }
 
 void IrFuncDef::regalloc() {
@@ -258,6 +373,8 @@ void IrFuncDef::regalloc() {
     for(int s=0; s<=11; s++)
         avail_regs.push_back(Preg('s', s));
 
+    Recommender rec = scan_recommendations(this);
+
     // now colorize the graph
 
     stack<int> stk_colorable;
@@ -287,8 +404,9 @@ void IrFuncDef::regalloc() {
         stk_colorable.pop();
 
         // map it to a preg
-        Preg reg = choose_reg(graph, x, avail_regs, vreg_map);
+        Preg reg = choose_reg(graph, x, avail_regs, vreg_map, rec.get_recommendation(x));
         vreg_map.insert(make_pair(x, reg));
+        rec.mark_setreg(x, reg);
     }
 
     check_alloc_does_not_conflict(this);

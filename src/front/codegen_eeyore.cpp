@@ -16,6 +16,15 @@ static char instbuf[EEYORE_INST_BUFSIZE];
 
 #define cdef(def) ((def)->pos==DefArg ? 'p' : 'T')
 
+string RVal::eeyore_ref_global() {
+    char buf[32];
+    switch(type) {
+        case ConstExp: sprintf(buf, "%d", val.constexp); break;
+        case Reference: sprintf(buf, "%c%d", cdef(val.reference), val.reference->index); break;
+        case TempVar: sprintf(buf, "t%d", val.tempvar); break;
+    }
+    return string(buf);
+}
 string RVal::eeyore_ref_local(IrFuncDef *func) {
     string pfx;
     char buf[32];

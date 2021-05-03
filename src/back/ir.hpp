@@ -127,6 +127,7 @@ public:
         return !(rhs == *this);
     }
 
+    string eeyore_ref_global();
     string eeyore_ref_local(IrFuncDef *func);
     bool regpooled();
     int reguid();
@@ -212,6 +213,10 @@ struct IrFuncDef: IrDeclContainer {
         auto it = vreg_map.find(reguid);
         assert(it!=vreg_map.end());
         return it->second;
+    }
+    bool has_vreg(RVal val) {
+        auto it = vreg_map.find(val.reguid());
+        return it!=vreg_map.end();
     }
     Vreg get_vreg(RVal val) {
         return get_vreg(val.reguid());

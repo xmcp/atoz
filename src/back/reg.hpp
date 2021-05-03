@@ -47,12 +47,12 @@ struct Preg {
         }
     };
 
-    string analyzed_eeyore_ref() {
+    string analyzed_eeyore_ref() const {
         char buf[32];
         sprintf(buf, "{reg: %c%d}", cat, index);
         return string(buf);
     }
-    string tigger_ref() {
+    string tigger_ref() const {
         char buf[32];
         sprintf(buf, "%c%d", cat, index);
         return string(buf);
