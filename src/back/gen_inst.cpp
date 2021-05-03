@@ -428,7 +428,11 @@ void IrReturnVoid::gen_inst(InstFuncDef *func) {
 }
 
 void IrReturn::gen_inst(InstFuncDef *func) {
-    func->push_stmt(new InstMov(Preg('a', 0), rload(retval, 1)));
+    if(retval.type==RVal::ConstExp)
+        func->push_stmt(new InstLoadImm(Preg('a', 0), retval.val.constexp));
+    else
+        func->push_stmt(new InstMov(Preg('a', 0), rload(retval, 1)));
+
     func->push_stmt(new InstRet(func));
 }
 

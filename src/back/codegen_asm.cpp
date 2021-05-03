@@ -56,11 +56,13 @@ void InstFuncDef::output_asm(list<string> &buf) {
     if(!isleaf)
         outasm("  sw      ra, -4(sp)");
 
-    if(imm_overflows(-STK(stacksize))) {
-        outasm("  li     t0, %d", -STK(stacksize));
-        outasm("  add    sp, sp, t0");
-    } else {
-        outasm("  addi    sp, sp, %d", -STK(stacksize));
+    if(!isleaf || stacksize>0) {
+        if(imm_overflows(-STK(stacksize))) {
+            outasm("  li     t0, %d", -STK(stacksize));
+            outasm("  add    sp, sp, t0");
+        } else {
+            outasm("  addi    sp, sp, %d", -STK(stacksize));
+        }
     }
 
     for(auto stmt: stmts)
@@ -204,11 +206,13 @@ void InstCall::output_asm(list<string> &buf) {
 }
 
 void InstRet::output_asm(list<string> &buf) {
-    if(imm_overflows(STK(func->stacksize))) {
-        outstmt("li t0, %d", STK(func->stacksize));
-        outstmt("add sp, sp, t0");
-    } else {
-        outstmt("addi sp, sp, %d", STK(func->stacksize));
+    if(!func->isleaf || func->stacksize>0) {
+        if(imm_overflows(STK(func->stacksize))) {
+            outstmt("li t0, %d", STK(func->stacksize));
+            outstmt("add sp, sp, t0");
+        } else {
+            outstmt("addi sp, sp, %d", STK(func->stacksize));
+        }
     }
 
     if(!func->isleaf)
