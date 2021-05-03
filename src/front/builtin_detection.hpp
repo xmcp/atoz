@@ -116,13 +116,14 @@ void IrFuncDefSet::gen_inst(InstRoot *root) {
      * a3 = 10000;
      * t1 = t0 - a3;
      * if (t1 >= 0) goto ret;
+     * a3 = 30;
      * t1 = a1 % a3;
      *
      * a4 = 1;
      * t1 = a4 << t1;
      * a1 = t0 << 2
      * a1 = a0 + a1
-     * a1 = a0 [0];
+     * a1 = a1 [0];
      * a1 = a1 / t1;
      * a3 = 2;
      * a1 = a1 % a3;
@@ -164,13 +165,14 @@ void IrFuncDefSet::gen_inst(InstRoot *root) {
     func->push_stmt(new InstLoadImm(a3, 10000));
     func->push_stmt(new InstOpBinary(t1, t0, OpMinus,  a3));
     func->push_stmt(new InstCondGoto(t1, RelGeq, x0, ret));
+    func->push_stmt(new InstLoadImm(a3, 30));
     func->push_stmt(new InstOpBinary(t1, a1, OpMod, a3));
 
     func->push_stmt(new InstLoadImm(a4, 1));
     func->push_stmt(new InstLeftShift(t1, a4, t1));
     func->push_stmt(new InstLeftShiftI(a1, t0, 2));
     func->push_stmt(new InstOpBinary(a1, a0, OpPlus, a1));
-    func->push_stmt(new InstArrayGet(a1, a0, 0));
+    func->push_stmt(new InstArrayGet(a1, a1, 0));
     func->push_stmt(new InstOpBinary(a1, a1, OpDiv, t1));
     func->push_stmt(new InstLoadImm(a3, 2));
     func->push_stmt(new InstOpBinary(a1, a1, OpMod, a3));
