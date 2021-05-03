@@ -132,7 +132,7 @@ void InstOpUnary::output_asm(list<string> &buf) {
 
 void InstMov::output_asm(list<string> &buf) {
     if(dest==src)
-        outstmt("# ... mv %s to self", tig(dest));
+        outstmt("#mv %s, %s", tig(dest), tig(src));
     else
         outstmt("mv %s, %s", tig(dest), tig(src));
 }
@@ -274,7 +274,10 @@ void InstComment::output_asm(list<string> &buf) {
 }
 
 void InstAddI::output_asm(list<string> &buf) {
-    outstmt("addi %s, %s, %d", tig(dest), tig(operand1), operand2);
+    if(dest==operand1 && operand2==0)
+        outstmt("#addi %s, %s, 0", tig(dest), tig(operand1));
+    else
+        outstmt("addi %s, %s, %d", tig(dest), tig(operand1), operand2);
 }
 
 void InstLeftShiftI::output_asm(list<string> &buf) {

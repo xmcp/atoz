@@ -232,8 +232,8 @@ void IrOpBinary::gen_inst(InstFuncDef *func) {
         func->push_stmt(new InstAddI(rstore(dest), regop1, operand2.val.constexp));
     } else if(op==OpMul && op2_is_const_powof2) {
         // can be simplified to left shift
-        int pow = get_small_pow2(operand2.val.constexp);
-        func->push_stmt(new InstLeftShiftI(rstore(dest), regop1, pow));
+        int shiftval = get_small_pow2(operand2.val.constexp);
+        func->push_stmt(new InstLeftShiftI(rstore(dest), regop1, shiftval));
     } else {
         // normal reg-reg add
         Preg regop2 = rload(operand2, 1);
