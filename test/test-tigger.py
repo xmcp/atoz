@@ -2,10 +2,10 @@ from runner import run_cmd, run_cmd_willsucc
 import pathlib
 from tqdm import tqdm
 
-run_cmd_willsucc('make clean')
-print('making compiler')
-out = run_cmd_willsucc('make', 120)
-print('MAKE OUTPUT: <<%s>>'%out)
+#run_cmd_willsucc('make clean')
+#print('making compiler')
+#out = run_cmd_willsucc('make', 120)
+#print('MAKE OUTPUT: <<%s>>'%out)
 
 out_path = pathlib.Path('test/out.S')
 
