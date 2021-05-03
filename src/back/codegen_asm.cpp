@@ -52,7 +52,10 @@ void InstFuncDef::output_asm(list<string> &buf) {
     outasm("  .type   %s, @function", name.c_str());
     outasm("");
     outasm("%s:", name.c_str());
-    outasm("  sw      ra, -4(sp)");
+
+    if(!isleaf)
+        outasm("  sw      ra, -4(sp)");
+
     if(imm_overflows(-STK(stacksize))) {
         outasm("  li     t0, %d", -STK(stacksize));
         outasm("  add    sp, sp, t0");
@@ -201,14 +204,16 @@ void InstCall::output_asm(list<string> &buf) {
 }
 
 void InstRet::output_asm(list<string> &buf) {
-    if(imm_overflows(STK(fn_stacksize))) {
-        outstmt("li t0, %d", STK(fn_stacksize));
+    if(imm_overflows(STK(func->stacksize))) {
+        outstmt("li t0, %d", STK(func->stacksize));
         outstmt("add sp, sp, t0");
     } else {
-        outstmt("addi sp, sp, %d", STK(fn_stacksize));
+        outstmt("addi sp, sp, %d", STK(func->stacksize));
     }
 
-    outstmt("lw ra, -4(sp)");
+    if(!func->isleaf)
+        outstmt("lw ra, -4(sp)");
+
     outstmt("ret");
 }
 

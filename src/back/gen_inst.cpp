@@ -344,6 +344,8 @@ int vector_index_of(vector<T> v, T x) {
 }
 
 vector<Preg> IrCallVoid::gen_inst_common(InstFuncDef *func) {
+    func->isleaf = false;
+
     // collect caller saved regs
 
     vector<Preg> saved_regs;
@@ -418,12 +420,12 @@ void IrCall::gen_inst(InstFuncDef *func) {
 }
 
 void IrReturnVoid::gen_inst(InstFuncDef *func) {
-    func->push_stmt(new InstRet(func->stacksize));
+    func->push_stmt(new InstRet(func));
 }
 
 void IrReturn::gen_inst(InstFuncDef *func) {
     func->push_stmt(new InstMov(Preg('a', 0), rload(retval, 1)));
-    func->push_stmt(new InstRet(func->stacksize));
+    func->push_stmt(new InstRet(func));
 }
 
 void IrLocalArrayFillZero::gen_inst(InstFuncDef *func) {

@@ -57,8 +57,10 @@ struct InstFuncDef: Inst {
     int stacksize; // in words
     list<InstStmt*> stmts;
 
+    bool isleaf;
+
     InstFuncDef(string name, int params_count, int stacksize):
-        name(name), params_count(params_count), stacksize(stacksize) {}
+        name(name), params_count(params_count), stacksize(stacksize), isleaf(true) {}
 
     void push_stmt(InstStmt *stmt) {
         stmts.push_back(stmt);
@@ -218,9 +220,9 @@ struct InstCall: InstStmt {
 };
 
 struct InstRet: InstStmt {
-    int fn_stacksize;
-    InstRet(int fn_stacksize):
-        fn_stacksize(fn_stacksize) {}
+    InstFuncDef *func;
+    InstRet(InstFuncDef *func):
+        func(func) {}
 
     void output_tigger(list<string> &buf) override;
     void output_asm(list<string> &buf) override;
