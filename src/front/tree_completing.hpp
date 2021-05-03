@@ -291,7 +291,6 @@ public:
     }
 
     void visit(Ast *node, SymTable *tbl) {
-        #define istype(ptr, cls) (dynamic_cast<cls*>(ptr)!=nullptr)
         #define proctype(type) do { \
             if(istype(node, type)) {visit((type*)node, tbl); return;} \
         } while(0)

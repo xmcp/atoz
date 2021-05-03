@@ -101,6 +101,10 @@ int main(int argc, char **argv) {
         skip_analyze = true;
     }
 
+    /// OPTIMIZE IR
+    for(auto func: ir_root->funcs)
+        func.first->peekhole_optimize();
+
     /// GEN CFG, REG ALLOC, CALC DESTROY SET
     if(!skip_analyze) {
         ir_root->install_builtin_destroy_sets();

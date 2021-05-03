@@ -22,3 +22,5 @@ inline bool imm_overflows(int imm) {
 #define outstmt(...) do { \
     outasm("    " __VA_ARGS__); \
 } while(0)
+
+#define istype(ptr, cls) (dynamic_cast<cls*>(ptr)!=nullptr)

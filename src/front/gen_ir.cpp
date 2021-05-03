@@ -1,8 +1,7 @@
 #include <cstdio>
 
+#include "../main/common.hpp"
 #include "ast.hpp"
-
-#define istype(ptr, cls) (dynamic_cast<cls*>(ptr)!=nullptr)
 
 #define generror(...) do { \
     printf("codegen ir error: "); \

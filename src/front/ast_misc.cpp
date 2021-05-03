@@ -2,8 +2,6 @@
 #include "ast.hpp"
 #include "tree_completing.hpp"
 
-#define istype(ptr,cls) (dynamic_cast<cls*>(ptr)!=nullptr)
-
 ///// push_val
 
 void AstCompUnit::push_val(Ast *next) {

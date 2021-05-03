@@ -27,6 +27,7 @@ using std::make_pair;
 
 ///// FORWARD DECL
 
+struct RVal;
 struct Ir;
 struct IrRoot;
 struct IrFuncDef;
@@ -63,6 +64,11 @@ public:
         LVal ret(TempVar);
         ret.val.tempvar = tidx;
         return ret;
+    }
+
+    bool operator==(const RVal &rhs) const;
+    bool operator!=(const RVal &rhs) const {
+        return !(*this == rhs);
     }
 
     string eeyore_ref_global();
@@ -103,6 +109,22 @@ public:
         RVal ret(TempVar);
         ret.val.tempvar = tidx;
         return ret;
+    }
+
+    bool operator==(const RVal &rhs) const {
+        if(type!=rhs.type)
+            return false;
+
+        if(type==TempVar)
+            return val.tempvar == rhs.val.tempvar;
+        else if(type==ConstExp)
+            return val.constexp == rhs.val.constexp;
+        else // reference
+            return val.reference == rhs.val.reference;
+    }
+
+    bool operator!=(const RVal &rhs) const {
+        return !(rhs == *this);
     }
 
     string eeyore_ref_local(IrFuncDef *func);
@@ -178,6 +200,7 @@ struct IrFuncDef: IrDeclContainer {
 
     void output_eeyore(list<string> &buf);
     void gen_inst(InstRoot *root);
+    void peekhole_optimize();
 
     // cfg
 

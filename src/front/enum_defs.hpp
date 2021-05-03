@@ -39,7 +39,8 @@ enum BinaryOpKinds {
 };
 
 enum RelKinds { // can be represented by asm
-    RelLess, RelGreater, RelLeq, RelGeq, RelEq, RelNeq
+    RelLess, RelGreater, RelLeq, RelGeq, RelEq, RelNeq,
+    NotARel
 };
 
 // helper func to conver lexer type -> parser type
@@ -124,6 +125,52 @@ inline string cvt_from_binary(RelKinds op) {
         case RelEq: return "==";
         case RelNeq: return "!=";
         default: assert(false); return "";
+    }
+}
+
+inline RelKinds cvt_to_rel(BinaryOpKinds op) {
+    switch(op) {
+        case OpLess:
+            return RelLess;
+        case OpGreater:
+            return RelGreater;
+        case OpLeq:
+            return RelLeq;
+        case OpGeq:
+            return RelGeq;
+        case OpEq:
+            return RelEq;
+        case OpNeq:
+            return RelNeq;
+        case OpPlus:
+        case OpMinus:
+        case OpMul:
+        case OpDiv:
+        case OpMod:
+        case OpAnd:
+        case OpOr:
+        default:
+            return NotARel;
+    }
+}
+
+inline RelKinds rel_invert(RelKinds op) {
+    switch(op) {
+        case RelLess:
+            return RelGeq;
+        case RelGreater:
+            return RelLeq;
+        case RelLeq:
+            return RelGreater;
+        case RelGeq:
+            return RelLess;
+        case RelEq:
+            return RelNeq;
+        case RelNeq:
+            return RelEq;
+        case NotARel:
+        default:
+            return NotARel;
     }
 }
 

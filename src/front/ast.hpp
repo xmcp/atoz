@@ -14,8 +14,6 @@ using std::string;
 extern int yylineno;
 extern int atoz_yycol;
 
-#define istype(ptr, cls) (dynamic_cast<cls*>(ptr)!=nullptr)
-
 ///// FORWARD DECL
 
 struct Ast;

@@ -1,12 +1,11 @@
-#include "ir.hpp"
-#include "../front/ast.hpp"
-
 #include <algorithm>
 #include <unordered_set>
 using std::max;
 using std::unordered_set;
 
-#define istype(ptr, cls) (dynamic_cast<cls*>(ptr)!=nullptr)
+#include "../main/common.hpp"
+#include "ir.hpp"
+#include "../front/ast.hpp"
 
 string demystify_reguid(int uid) {
     char buf[32];
@@ -60,6 +59,10 @@ int LVal::reguid() {
         return val.reference->index + REGUID_ARG_OFFSET;
     else // local
         return val.reference->index;
+}
+
+bool LVal::operator==(const RVal &rhs) const {
+    return (RVal)(*this)==rhs;
 }
 
 int IrFuncDef::gen_label() {
