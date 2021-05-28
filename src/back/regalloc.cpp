@@ -314,6 +314,9 @@ struct Recommender {
             rec_label.insert(make_pair(_find(stmt->param.reguid()), Preg('a', stmt->pidx)));
         }
     }
+    void mark_param(int i) {
+        rec_label.insert(make_pair(REGUID_ARG_OFFSET+i, Preg('a', i)));
+    }
     void mark_setreg(int vregid, Preg preg) {
         if(OUTPUT_REC_LEARNT)
                 printf(
@@ -336,6 +339,10 @@ struct Recommender {
 
 Recommender scan_recommendations(IrFuncDef *func) {
     Recommender rec;
+
+    for(int i=0; i<(int)func->params->val.size(); i++)
+        rec.mark_param(i);
+
     for(const auto& stmtpair: func->stmts) {
         auto stmt = stmtpair.first;
         if(istype(stmt, IrMov))
@@ -347,6 +354,7 @@ Recommender scan_recommendations(IrFuncDef *func) {
         else if(istype(stmt, IrCall))
             rec.mark_call((IrCall*)stmt);
     }
+
     return rec;
 }
 

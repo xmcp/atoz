@@ -469,11 +469,12 @@ void IrLocalArrayFillZero::gen_inst(InstFuncDef *func) {
     /* # Fill `array` of `totelems` with zeros
      * t0 = array
      * t1 = totelems
+     * t1 = t1 << 2
+     * t1 = t1 + t0
      * loop:
      * t0 [0] = 0
-     * t1 = t1 - 1
      * t0 = t0 + 4
-     * if t1>0 goto loop
+     * if t0<t1 goto loop
      */
 
     assert(dest.type==LVal::Reference);
@@ -485,9 +486,10 @@ void IrLocalArrayFillZero::gen_inst(InstFuncDef *func) {
 
     func->push_stmt(new InstLoadAddrStack(Preg('t', 0), stackpos));
     func->push_stmt(new InstLoadImm(Preg('t', 1), totelems));
+    func->push_stmt(new InstLeftShiftI(Preg('t', 1), Preg('t', 1), 2));
+    func->push_stmt(new InstOpBinary(Preg('t', 1), Preg('t', 1), OpPlus, Preg('t', 0)));
     func->push_stmt(new InstLabel(looplabel));
     func->push_stmt(new InstArraySet(Preg('t', 0), 0, Preg('x', 0)));
-    func->push_stmt(new InstAddI(Preg('t', 1), Preg('t', 1), -1));
     func->push_stmt(new InstAddI(Preg('t', 0), Preg('t', 0), 4));
-    func->push_stmt(new InstCondGoto(Preg('t', 1), RelGreater, Preg('x', 0), looplabel));
+    func->push_stmt(new InstCondGoto(Preg('t', 0), RelLess, Preg('t', 1), looplabel));
 }
